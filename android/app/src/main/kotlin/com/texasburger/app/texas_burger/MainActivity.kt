@@ -1,0 +1,5 @@
+package com.texasburger.app.texas_burger
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

@@ -99,17 +99,17 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                         ),
                         margin: const EdgeInsets.only(bottom: 14),
                         decoration: BoxDecoration(
-                          color: AppTheme.lightRed,
+                          color: AppTheme.dangerSoft,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppTheme.primaryRed.withValues(alpha: 0.3),
+                            color: AppTheme.danger.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           children: [
                             const Icon(
                               Icons.error_outline,
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.danger,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -117,7 +117,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                               child: Text(
                                 errorMessage!,
                                 style: const TextStyle(
-                                  color: AppTheme.primaryRed,
+                                  color: AppTheme.danger,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),

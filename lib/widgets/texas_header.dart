@@ -46,7 +46,7 @@ class TexasHeader extends StatelessWidget {
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.lunch_dining,
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primary,
                         size: 32,
                       ),
                     ),

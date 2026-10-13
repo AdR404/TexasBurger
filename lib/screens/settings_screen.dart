@@ -100,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Icon(
                 isPromo ? Icons.star_rate_rounded : Icons.add_circle_outline,
-                color: AppTheme.primaryRed,
+                color: AppTheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -175,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   value: isPromo,
-                  activeThumbColor: AppTheme.primaryRed,
+                  activeThumbColor: AppTheme.primary,
                   onChanged: (val) {
                     setDialogState(() {
                       isPromo = val;
@@ -238,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryRed,
+                backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Guardar'),
@@ -360,7 +360,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.lunch_dining,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primary,
                           size: 40,
                         ),
                       ),
@@ -384,7 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'Deliciosamente asadas al carbón',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.primaryRed,
+                            color: AppTheme.brand,
                             fontWeight: FontWeight.bold,
                             fontStyle: FontStyle.italic,
                           ),
@@ -427,7 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryRed,
+                      backgroundColor: AppTheme.primary,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -455,7 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     leading: CircleAvatar(
-                      backgroundColor: p.isPromo ? AppTheme.lightRed : AppTheme.creamBg,
+                      backgroundColor: p.isPromo ? AppTheme.promoSoft : AppTheme.creamBg,
                       child: Icon(
                         p.isPromo
                             ? Icons.star_rate_rounded
@@ -464,7 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 : p.category == 'Bebidas'
                                     ? Icons.local_drink_rounded
                                     : Icons.lunch_dining_rounded,
-                        color: p.isPromo ? AppTheme.primaryRed : AppTheme.navyBlue,
+                        color: p.isPromo ? AppTheme.promo : AppTheme.navyBlue,
                         size: 20,
                       ),
                     ),
@@ -480,7 +480,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.lightRed,
+                              color: AppTheme.promoSoft,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -488,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryRed,
+                                color: AppTheme.promo,
                               ),
                             ),
                           ),
@@ -497,7 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(
                       '\$${p.price.toStringAsFixed(2)} MXN • ${p.category}',
                       style: const TextStyle(
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -513,7 +513,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               Switch(
                                 value: p.isAvailable,
-                                activeThumbColor: AppTheme.primaryRed,
+                                activeThumbColor: AppTheme.primary,
                                 onChanged: (val) => _productService.toggleAvailability(p.id),
                               ),
                             ],
@@ -521,7 +521,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: p.isAvailable ? Colors.green.shade50 : Colors.red.shade50,
+                              color: p.isAvailable ? Colors.green.shade50 : AppTheme.dangerSoft,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -529,7 +529,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: p.isAvailable ? Colors.green.shade700 : Colors.red.shade700,
+                                color: p.isAvailable ? Colors.green.shade700 : AppTheme.danger,
                               ),
                             ),
                           ),
@@ -596,13 +596,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.delete_outline, color: Colors.red),
+                        leading: const Icon(Icons.delete_outline, color: AppTheme.danger),
                         title: const Text('Limpiar Historial de Ventas'),
                         subtitle: const Text('Elimina todas las ventas guardadas localmente'),
                         trailing: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
+                            foregroundColor: AppTheme.danger,
+                            side: const BorderSide(color: AppTheme.danger),
                           ),
                           onPressed: () async {
                             final scaffold = ScaffoldMessenger.of(context);

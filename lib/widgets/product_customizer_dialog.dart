@@ -92,7 +92,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                         'Precio base: \$${widget.product.price.toStringAsFixed(2)} MXN',
                         style: const TextStyle(
                           fontSize: 13,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -132,9 +132,9 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           title: Text(extra.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          subtitle: Text('+ \$${extra.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                          subtitle: Text('+ \$${extra.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.bold)),
                           value: isSelected,
-                          activeColor: AppTheme.primaryRed,
+                          activeColor: AppTheme.primary,
                           onChanged: (bool? checked) {
                             setState(() {
                               if (checked == true) {
@@ -153,7 +153,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                     if (widget.product.category == 'Hamburguesas' || widget.product.isPromo) ...[
                       const Row(
                         children: [
-                          Icon(Icons.remove_circle_outline, size: 18, color: AppTheme.primaryRed),
+                          Icon(Icons.remove_circle_outline, size: 18, color: AppTheme.primary),
                           SizedBox(width: 6),
                           Text(
                             'Quitar ingredientes / Preparación:',
@@ -170,7 +170,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                           return FilterChip(
                             label: Text(exclusion, style: TextStyle(fontSize: 12, color: isRemoved ? Colors.white : AppTheme.textDark)),
                             selected: isRemoved,
-                            selectedColor: AppTheme.primaryRed,
+                            selectedColor: AppTheme.primary,
                             checkmarkColor: Colors.white,
                             backgroundColor: AppTheme.creamBg,
                             onSelected: (selected) {
@@ -223,7 +223,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                             IconButton(
                               onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
                               icon: const Icon(Icons.remove_circle_outline),
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.primary,
                             ),
                             Text(
                               '$_quantity',
@@ -232,7 +232,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                             IconButton(
                               onPressed: () => setState(() => _quantity++),
                               icon: const Icon(Icons.add_circle_outline),
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.primary,
                             ),
                           ],
                         ),
@@ -261,7 +261,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                   Navigator.of(context).pop(item);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryRed,
+                  backgroundColor: AppTheme.primary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Row(

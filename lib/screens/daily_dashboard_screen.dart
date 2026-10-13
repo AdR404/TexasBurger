@@ -68,7 +68,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.file_download_outlined, color: AppTheme.primaryRed),
+                  icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                   tooltip: 'Exportar Ventas del Periodo',
                   onPressed: () {
                     final pSales = DashboardService.filterSales(sales, _selectedPeriod);
@@ -90,7 +90,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.navyBlue, Color(0xFF1B3B6F)],
+                  colors: [AppTheme.navyBlue, AppTheme.navyBlueLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -204,7 +204,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   value: metrics.promedioHamburguesasPorVenta.toStringAsFixed(1),
                   subtitle: 'Unidades promedio',
                   icon: Icons.lunch_dining_rounded,
-                  accentColor: AppTheme.primaryRed,
+                  accentColor: AppTheme.primary,
                 ),
               ],
             ),
@@ -270,10 +270,10 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppTheme.lightRed,
+                              color: AppTheme.primarySoft,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.lunch_dining, size: 16, color: AppTheme.primaryRed),
+                            child: const Icon(Icons.lunch_dining, size: 16, color: AppTheme.primary),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -322,7 +322,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryRed : Colors.transparent,
+            color: isSelected ? AppTheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(

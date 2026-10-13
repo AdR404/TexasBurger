@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
+/// Paleta de Texas Burger (opción A, "Marino").
+///
+/// Regla general: el rojo ya no es el color de toda la app. Se usa solo para
+/// la marca, las promociones y descuentos, y las acciones de peligro.
+/// El color principal (acciones, selección, totales, íconos) es el azul marino.
 class AppTheme {
-  // Brand Colors
-  static const Color primaryRed = Color(0xFFD31A24);
-  static const Color darkRed = Color(0xFFA8121B);
-  static const Color lightRed = Color(0xFFFFECEE);
-  
+  // ---------------------------------------------------------------------------
+  // Colores base de la marca (los del logo)
+  // ---------------------------------------------------------------------------
   static const Color navyBlue = Color(0xFF0F2643);
   static const Color navyBlueLight = Color(0xFF1E3A5F);
-  
   static const Color gold = Color(0xFFF5A623);
   static const Color goldLight = Color(0xFFFFF7E6);
   static const Color texasYellow = Color(0xFFFFD43B);
-  
   static const Color creamBg = Color(0xFFFBF3DE);
   static const Color cardBg = Colors.white;
   static const Color textDark = Color(0xFF181B1F);
@@ -21,20 +22,58 @@ class AppTheme {
   static const Color successGreen = Color(0xFF10B981);
   static const Color infoBlue = Color(0xFF2563EB);
 
+  // ---------------------------------------------------------------------------
+  // Roles de color: usa estos nombres en las pantallas, no el color directo.
+  // ---------------------------------------------------------------------------
+
+  /// Acciones principales, elementos seleccionados, totales e íconos.
+  static const Color primary = navyBlue;
+
+  /// Fondo suave del color principal (círculos de ícono, chips, filas).
+  static const Color primarySoft = Color(0xFFE7ECF3);
+
+  /// Promociones y descuentos. Es el único uso de rojo "de contenido".
+  static const Color promo = Color(0xFFD31A24);
+  static const Color promoSoft = Color(0xFFFFECEE);
+
+  /// Eliminar, gastos, diferencias negativas y errores.
+  static const Color danger = Color(0xFFD31A24);
+  static const Color dangerSoft = Color(0xFFFFECEE);
+
+  /// Marca: logo y eslogan.
+  static const Color brand = Color(0xFFD31A24);
+
+  /// Fondos suaves de apoyo (confirmaciones, información y destacados).
+  static const Color successSoft = Color(0xFFECFDF5);
+  static const Color infoSoft = Color(0xFFDDEFFB);
+  static const Color goldSoft = Color(0xFFFFF1B8);
+  static const Color goldDark = Color(0xFF7A4B00);
+
+  // ---------------------------------------------------------------------------
+  // Nombres anteriores. Siguen existiendo para no romper ramas ya empezadas,
+  // pero ya no deben usarse: el analizador avisará.
+  // ---------------------------------------------------------------------------
+  @Deprecated('Usa AppTheme.primary, promo, danger o brand según el caso.')
+  static const Color primaryRed = Color(0xFFD31A24);
+  @Deprecated('Usa AppTheme.promo, danger o brand según el caso.')
+  static const Color darkRed = Color(0xFFA8121B);
+  @Deprecated('Usa AppTheme.primarySoft, promoSoft o dangerSoft según el caso.')
+  static const Color lightRed = Color(0xFFFFECEE);
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: creamBg,
       colorScheme: const ColorScheme.light(
-        primary: primaryRed,
+        primary: primary,
         onPrimary: Colors.white,
-        secondary: navyBlue,
+        secondary: navyBlueLight,
         onSecondary: Colors.white,
         tertiary: gold,
         onTertiary: Colors.black,
         surface: cardBg,
         onSurface: textDark,
-        error: Color(0xFFDC2626),
+        error: danger,
         onError: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
@@ -60,7 +99,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryRed,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -89,12 +128,18 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
-        selectedColor: primaryRed,
+        selectedColor: primary,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: borderLight),
         ),
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        indicatorColor: primarySoft,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: primary,
       ),
       dividerTheme: const DividerThemeData(
         color: borderLight,

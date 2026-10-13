@@ -3,7 +3,7 @@ import '../services/sales_service.dart';
 import '../services/dashboard_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/metric_card.dart';
-import '../widgets/sale_chart.dart';
+//import '../widgets/sale_chart.dart';
 import '../widgets/export_dialog.dart';
 
 
@@ -240,7 +240,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
             const SizedBox(height: 20),
 
             // Sales Chart (fl_chart)
-            SaleChart(hourlySales: metrics.hourlySales),
+            //SaleChart(hourlySales: metrics.hourlySales),
             const SizedBox(height: 20),
 
             // Top Products

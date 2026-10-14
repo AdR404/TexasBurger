@@ -284,7 +284,9 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
           children: [
             Icon(Icons.person_outline, color: AppTheme.navyBlue),
             SizedBox(width: 10),
-            Text('Cambiar a Modo Usuario'),
+            Expanded(
+              child: Text('Cambiar a Modo Usuario'),
+            ),
           ],
         ),
         content: const Text(

@@ -337,23 +337,28 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          '\$${product.price.toStringAsFixed(2)} MXN',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.navyBlue,
+                                        Flexible(
+                                          child: Text(
+                                            '\$${product.price.toStringAsFixed(2)} MXN',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.navyBlue,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (product.availableExtras.isNotEmpty || product.category == 'Hamburguesas')
+                                        if (product.availableExtras.isNotEmpty || product.category == 'Hamburguesas') ...[
+                                          const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () => _openCustomizer(product),
                                             borderRadius: BorderRadius.circular(6),
                                             child: const Padding(
                                               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               child: Row(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(Icons.tune, size: 14, color: AppTheme.navyBlue),
                                                   SizedBox(width: 4),
@@ -365,6 +370,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                               ),
                                             ),
                                           ),
+                                        ],
                                       ],
                                     ),
                                   ],

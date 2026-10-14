@@ -87,12 +87,16 @@ class SaleHistoryList extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.navyBlue,
+                            Flexible(
+                              child: Text(
+                                isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.navyBlue,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),

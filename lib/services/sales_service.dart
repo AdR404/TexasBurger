@@ -4,12 +4,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/venta.dart';
 import '../models/venta_item.dart';
 import '../models/producto.dart';
+import '../models/sale_context.dart';
 import 'db_service.dart';
 
 class SalesService extends ChangeNotifier {
   static final SalesService _instance = SalesService._internal();
   factory SalesService() => _instance;
-  SalesService._internal();
+  SalesService._internal() : _remoteWriter = DbService.guardarVenta;
+
+  @visibleForTesting
+  SalesService.forTesting({required Future<void> Function(Venta) remoteWriter})
+      : _remoteWriter = remoteWriter;
+
+  final Future<void> Function(Venta) _remoteWriter;
 
   List<Venta> _sales = [];
   int _lastTicketNumber = 1000;
@@ -48,6 +55,7 @@ class SalesService extends ChangeNotifier {
   }
 
   Future<Venta> registerSale({
+    required SaleContext saleContext,
     required List<VentaItem> items,
     required double subtotal,
     required double discount,
@@ -81,6 +89,7 @@ class SalesService extends ChangeNotifier {
       cashGiven: cashGiven,
       changeReturned: changeReturned,
       timestamp: DateTime.now(),
+      saleContext: saleContext,
       notes: notes,
       orderType: orderType,
       tableNumber: tableNumber,
@@ -92,7 +101,7 @@ class SalesService extends ChangeNotifier {
     _sales.insert(0, newSale);
     await _save();
     notifyListeners();
-    DbService.guardarVenta(newSale);
+    _remoteWriter(newSale);
     return newSale;
   }
 

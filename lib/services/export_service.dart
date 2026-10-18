@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import '../models/venta.dart';
 import '../models/corte_caja.dart';
+import '../models/sale_context.dart';
 
 class ExportService {
   static String generateSalesCsv(List<Venta> sales) {
@@ -12,7 +13,7 @@ class ExportService {
     // UTF-8 BOM so Excel opens accented Spanish characters correctly
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas',
+      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas,Empresa_ID,Empresa,Sucursal_ID,Sucursal,Empleado_ID,Atendido_Por',
     );
 
     for (final sale in sales) {
@@ -40,9 +41,17 @@ class ExportService {
       final descuento = sale.discount.toStringAsFixed(2);
       final total = sale.total.toStringAsFixed(2);
       final notas = sale.notes.replaceAll('"', '""');
+      final staffColumns = [
+        sale.saleContext?.companyId ?? SaleContext.texasBurgerId,
+        sale.companyName,
+        sale.saleContext?.branchId ?? '',
+        sale.branchName,
+        sale.saleContext?.employeeId ?? '',
+        sale.employeeName,
+      ].map((value) => '"${value.replaceAll('"', '""')}"').join(',');
 
       buffer.writeln(
-        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas"',
+        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas",$staffColumns',
       );
     }
 
@@ -73,6 +82,9 @@ class ExportService {
 
     final buffer = StringBuffer();
     buffer.writeln('🍔 *TEXAS BURGER - CORTE DE CAJA* 🍔');
+    buffer.writeln('Empresa: ${corte.openingContext?.companyName ?? SaleContext.texasBurgerName}');
+    buffer.writeln('Sucursal: ${corte.openingContext?.branchName ?? SaleContext.notRecorded}');
+    buffer.writeln('Abrió caja: ${corte.openingContext?.employeeName ?? SaleContext.notRecorded}');
     buffer.writeln('----------------------------------');
     buffer.writeln('📅 *Apertura:* $openedStr');
     buffer.writeln('🏁 *Cierre:* $closedStr');
@@ -140,6 +152,19 @@ class ExportService {
     buffer.writeln('📱 Transferencia: \$${transfer.toStringAsFixed(2)}');
     buffer.writeln('----------------------------------');
     buffer.writeln('💰 *VENTA TOTAL:* \$${total.toStringAsFixed(2)}');
+
+    if (sales.isNotEmpty) {
+      final saleDate = DateFormat('dd/MM/yyyy');
+      final saleTime = DateFormat('HH:mm:ss');
+      buffer.writeln('----------------------------------');
+      buffer.writeln('📋 *Tickets:*');
+      for (final sale in sales) {
+        buffer.writeln('#${sale.ticketNumber} — ${sale.companyName}');
+        buffer.writeln('Sucursal: ${sale.branchName}');
+        buffer.writeln('Atendido por: ${sale.employeeName}');
+        buffer.writeln('Fecha: ${saleDate.format(sale.timestamp)} | Hora: ${saleTime.format(sale.timestamp)}');
+      }
+    }
 
     return buffer.toString();
   }

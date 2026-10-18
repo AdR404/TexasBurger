@@ -48,6 +48,10 @@ class DbService {
   }
 
   static Future<void> guardarVenta(Venta venta) async {
+    // Legacy remote schema only. saleContext stays local until the reviewed
+    // migration is deployed and the remote writer is explicitly updated.
+    // usuario_id=2 is the pre-existing legacy value, NOT a mapping of the
+    // selected demo employee. See database/migrations/README.md.
     try {
       final row = await _db
           .from('ventas')

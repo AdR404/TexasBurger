@@ -3,15 +3,23 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/corte_caja.dart';
 import '../models/venta.dart';
+import '../models/sale_context.dart';
 
 class CajaService extends ChangeNotifier {
   static final CajaService _instance = CajaService._internal();
   factory CajaService() => _instance;
   CajaService._internal();
 
+  @visibleForTesting
+  CajaService.forTesting();
+
   CorteCaja? _activeCorte;
   List<CorteCaja> _cortesHistory = [];
   bool _initialized = false;
+  SaleContext? _saleContext;
+
+  SaleContext? get saleContext => _saleContext;
+  bool get isBranchLocked => isCajaOpen && _saleContext != null;
 
   bool get isCajaOpen => _activeCorte != null && !_activeCorte!.isClosed;
   CorteCaja? get activeCorte => _activeCorte;
@@ -20,6 +28,15 @@ class CajaService extends ChangeNotifier {
   Future<void> init() async {
     if (_initialized) return;
     final prefs = await SharedPreferences.getInstance();
+
+    final contextString = prefs.getString('texas_staff_context');
+    if (contextString != null) {
+      try {
+        _saleContext = SaleContext.fromJson(jsonDecode(contextString) as Map<String, dynamic>);
+      } catch (_) {
+        _saleContext = null;
+      }
+    }
 
     final activeString = prefs.getString('texas_active_corte');
     if (activeString != null && activeString.isNotEmpty) {
@@ -42,11 +59,24 @@ class CajaService extends ChangeNotifier {
     }
 
     _initialized = true;
+    // Recover the opening selection if the separate active selection is absent.
+    // The opening employee is not used to rewrite any historical sale.
+    if (isCajaOpen) {
+      final opening = _activeCorte!.openingContext;
+      if (_saleContext == null || (opening != null && _saleContext!.branchId != opening.branchId)) {
+        _saleContext = opening;
+      }
+    }
     notifyListeners();
   }
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
+    if (_saleContext != null) {
+      await prefs.setString('texas_staff_context', jsonEncode(_saleContext!.toJson()));
+    } else {
+      await prefs.remove('texas_staff_context');
+    }
     if (_activeCorte != null) {
       await prefs.setString('texas_active_corte', jsonEncode(_activeCorte!.toJson()));
     } else {
@@ -57,9 +87,21 @@ class CajaService extends ChangeNotifier {
     await prefs.setString('texas_cortes_history', historyJson);
   }
 
-  Future<void> abrirCaja(double initialCash) async {
+  Future<void> updateSaleContext(SaleContext selection) async {
+    if (isBranchLocked && selection.branchId != _saleContext!.branchId) {
+      throw StateError('La sucursal se conserva hasta cerrar el turno.');
+    }
+    _saleContext = selection;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> abrirCaja(double initialCash, {required SaleContext saleContext}) async {
+    if (isCajaOpen) throw StateError('Ya hay un turno abierto.');
+    _saleContext = saleContext;
     _activeCorte = CorteCaja(
       id: 'corte_${DateTime.now().millisecondsSinceEpoch}',
+      openingContext: saleContext,
       openedAt: DateTime.now(),
       initialCash: initialCash,
       expectedCash: initialCash,
@@ -97,6 +139,7 @@ class CajaService extends ChangeNotifier {
 
     _activeCorte = CorteCaja(
       id: _activeCorte!.id,
+      openingContext: _activeCorte!.openingContext,
       openedAt: _activeCorte!.openedAt,
       initialCash: _activeCorte!.initialCash,
       cashIn: newCashIn,
@@ -148,6 +191,7 @@ class CajaService extends ChangeNotifier {
 
     return CorteCaja(
       id: _activeCorte!.id,
+      openingContext: _activeCorte!.openingContext,
       openedAt: _activeCorte!.openedAt,
       closedAt: _activeCorte!.closedAt,
       initialCash: _activeCorte!.initialCash,
@@ -175,6 +219,7 @@ class CajaService extends ChangeNotifier {
 
     final closedCorte = CorteCaja(
       id: live.id,
+      openingContext: live.openingContext,
       openedAt: live.openedAt,
       closedAt: DateTime.now(),
       initialCash: live.initialCash,
@@ -195,6 +240,7 @@ class CajaService extends ChangeNotifier {
 
     _cortesHistory.insert(0, closedCorte);
     _activeCorte = null;
+    _saleContext = null;
     await _save();
     notifyListeners();
     return closedCorte;

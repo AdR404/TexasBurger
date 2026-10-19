@@ -16,11 +16,11 @@ class PromoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isSpecial ? AppTheme.gold : AppTheme.primaryRed,
+        color: isSpecial ? AppTheme.gold : AppTheme.promo,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: (isSpecial ? AppTheme.gold : AppTheme.primaryRed).withValues(alpha: 0.3),
+            color: (isSpecial ? AppTheme.gold : AppTheme.promo).withValues(alpha: 0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

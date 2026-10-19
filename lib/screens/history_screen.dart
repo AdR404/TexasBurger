@@ -62,7 +62,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final matchOrderType = sale.orderType.toLowerCase().contains(q);
         final matchCustomer = (sale.customerName ?? '').toLowerCase().contains(q);
         final matchProducts = sale.items.any((i) => i.product.name.toLowerCase().contains(q));
-        return matchTicket || matchMethod || matchOrderType || matchCustomer || matchProducts;
+        final matchStaff = sale.branchName.toLowerCase().contains(q) ||
+            sale.employeeName.toLowerCase().contains(q) ||
+            sale.companyName.toLowerCase().contains(q);
+        return matchTicket || matchMethod || matchOrderType || matchCustomer || matchProducts || matchStaff;
       }
       return true;
     }).toList();
@@ -83,7 +86,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: TextField(
                         onChanged: (val) => setState(() => _searchFilter = val),
                         decoration: InputDecoration(
-                          hintText: 'Buscar por # ticket, cliente, mesa o producto...',
+                          hintText: 'Ticket, cliente, producto, sucursal o empleado...',
                           prefixIcon: const Icon(Icons.search, color: AppTheme.navyBlue),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           filled: true,
@@ -95,13 +98,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
                         _selectedDate == null ? Icons.calendar_today_outlined : Icons.calendar_month,
-                        color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.primaryRed,
+                        color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.infoBlue,
                       ),
                       tooltip: 'Filtrar por fecha',
+                      visualDensity: VisualDensity.compact,
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -117,26 +121,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     if (_selectedDate != null)
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.grey),
+                        visualDensity: VisualDensity.compact,
                         onPressed: () => setState(() => _selectedDate = null),
                       ),
                     IconButton(
-                      icon: const Icon(Icons.file_download_outlined, color: AppTheme.primaryRed),
+                      icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                       tooltip: 'Exportar a CSV o WhatsApp',
+                      visualDensity: VisualDensity.compact,
                       onPressed: () => _showExportDialog(filteredSales),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${filteredSales.length} ventas encontradas',
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                    Expanded(
+                      child: Text(
+                        '${filteredSales.length} ventas encontradas',
+                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     Text(
                       'Total: \$${totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppTheme.primaryRed, fontSize: 16, fontWeight: FontWeight.w900),
+                      style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),

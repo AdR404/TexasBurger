@@ -21,7 +21,7 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? AppTheme.primaryRed;
+    final color = accentColor ?? AppTheme.primary;
 
     return InkWell(
       onTap: onTap,
@@ -74,7 +74,7 @@ class MetricCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: color == AppTheme.primaryRed ? AppTheme.primaryRed : AppTheme.navyBlue,
+                color: AppTheme.primary,
                 letterSpacing: 0.2,
               ),
               maxLines: 1,

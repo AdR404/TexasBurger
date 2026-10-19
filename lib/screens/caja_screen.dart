@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/corte_caja.dart';
+import '../models/sale_context.dart';
 import '../services/caja_service.dart';
 import '../services/sales_service.dart';
 import '../services/export_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/staff_context_selector.dart';
 
 class CajaScreen extends StatefulWidget {
   const CajaScreen({super.key});
@@ -39,6 +41,8 @@ class _CajaScreenState extends State<CajaScreen> {
   void _showAbrirCajaDialog() {
     final controller = TextEditingController(text: '500');
     final presets = [300, 500, 800, 1000, 1500];
+    SaleContext? selection = _cajaService.saleContext;
+    bool opening = false;
 
     showDialog(
       context: context,
@@ -47,15 +51,20 @@ class _CajaScreenState extends State<CajaScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
-              Icon(Icons.point_of_sale, color: AppTheme.primaryRed),
+              Icon(Icons.point_of_sale, color: AppTheme.primary),
               SizedBox(width: 8),
-              Text('Apertura de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text('Apertura de caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
-          content: Column(
+          content: SingleChildScrollView(child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              StaffContextSelector(
+                initialSelection: _cajaService.saleContext,
+                onChanged: (value) => setDialogState(() => selection = value),
+              ),
+              const SizedBox(height: 16),
               const Text('Ingresa el monto del fondo inicial en efectivo para cambio:'),
               const SizedBox(height: 14),
               TextField(
@@ -75,7 +84,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 spacing: 8,
                 children: presets.map((val) => ActionChip(
                   label: Text('\$$val'),
-                  backgroundColor: controller.text == '$val' ? AppTheme.lightRed : AppTheme.creamBg,
+                  backgroundColor: controller.text == '$val' ? AppTheme.primarySoft : AppTheme.creamBg,
                   onPressed: () {
                     setDialogState(() {
                       controller.text = '$val';
@@ -84,16 +93,17 @@ class _CajaScreenState extends State<CajaScreen> {
                 )).toList(),
               ),
             ],
-          ),
+          )),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: selection == null || opening ? null : () async {
+                setDialogState(() => opening = true);
                 final amount = double.tryParse(controller.text) ?? 0.0;
-                await _cajaService.abrirCaja(amount);
+                await _cajaService.abrirCaja(amount, saleContext: selection!);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Iniciar Turno'),
@@ -115,9 +125,14 @@ class _CajaScreenState extends State<CajaScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(isGasto ? Icons.remove_circle : Icons.add_circle, color: isGasto ? Colors.red : AppTheme.successGreen),
+            Icon(isGasto ? Icons.remove_circle : Icons.add_circle, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
             const SizedBox(width: 8),
-            Text(isGasto ? 'Registrar Gasto / Salida' : 'Registrar Entrada de Efectivo', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Text(
+                isGasto ? 'Registrar gasto / salida' : 'Registrar entrada de efectivo',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -153,7 +168,7 @@ class _CajaScreenState extends State<CajaScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isGasto ? Colors.red : AppTheme.successGreen,
+              backgroundColor: isGasto ? AppTheme.danger : AppTheme.successGreen,
             ),
             onPressed: () async {
               final amount = double.tryParse(amountController.text) ?? 0.0;
@@ -182,12 +197,12 @@ class _CajaScreenState extends State<CajaScreen> {
           final diff = counted - live.expectedCash;
 
           Color diffColor = AppTheme.successGreen;
-          String diffText = 'Caja Cuadrada (Exacto)';
+          String diffText = 'Caja cuadrada (exacto)';
           if (diff > 0) {
             diffColor = Colors.blue.shade700;
             diffText = 'Sobrante: +\$${diff.toStringAsFixed(2)}';
           } else if (diff < 0) {
-            diffColor = Colors.red;
+            diffColor = AppTheme.danger;
             diffText = 'Faltante: -\$${diff.abs().toStringAsFixed(2)}';
           }
 
@@ -195,9 +210,9 @@ class _CajaScreenState extends State<CajaScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Row(
               children: [
-                Icon(Icons.inventory_rounded, color: AppTheme.primaryRed),
+                Icon(Icons.inventory_rounded, color: AppTheme.primary),
                 SizedBox(width: 8),
-                Text('Arqueo y Corte de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text('Arqueo y corte de caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             ),
             content: SingleChildScrollView(
@@ -267,7 +282,7 @@ class _CajaScreenState extends State<CajaScreen> {
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryRed),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
                 onPressed: () async {
                   final closedCorte = await _cajaService.cerrarCaja(
                     actualCashCounted: counted,
@@ -295,7 +310,7 @@ class _CajaScreenState extends State<CajaScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('¡Corte de Caja Finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('¡Corte de caja finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +359,7 @@ class _CajaScreenState extends State<CajaScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-              color: isNegative ? Colors.red : (isBold ? AppTheme.navyBlue : AppTheme.textDark),
+              color: isNegative ? AppTheme.danger : (isBold ? AppTheme.navyBlue : AppTheme.textDark),
             ),
           ),
         ],
@@ -365,6 +380,8 @@ class _CajaScreenState extends State<CajaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StaffContextBar(),
+            const SizedBox(height: 12),
             // Status Card
             if (!isOpen) ...[
               Container(
@@ -390,7 +407,7 @@ class _CajaScreenState extends State<CajaScreen> {
                       child: const Icon(Icons.lock_clock, size: 36, color: AppTheme.navyBlue),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Caja Actualmente Cerrada', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                    const Text('Caja actualmente cerrada', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
                     const SizedBox(height: 6),
                     const Text(
                       'Inicia el turno ingresando el fondo de caja en efectivo para registrar ventas, gastos y arqueo.',
@@ -400,9 +417,9 @@ class _CajaScreenState extends State<CajaScreen> {
                     const SizedBox(height: 18),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Abrir Caja / Iniciar Turno'),
+                      label: const Text('Abrir caja / iniciar turno'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       ),
                       onPressed: _showAbrirCajaDialog,
@@ -416,7 +433,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppTheme.navyBlue, Color(0xFF1E3A5F)],
+                    colors: [AppTheme.navyBlue, AppTheme.navyBlueLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -439,7 +456,7 @@ class _CajaScreenState extends State<CajaScreen> {
                               decoration: const BoxDecoration(color: AppTheme.successGreen, shape: BoxShape.circle),
                             ),
                             const SizedBox(width: 8),
-                            const Text('TURNO EN CURSO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5)),
+                            const Text('Turno en curso', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5)),
                           ],
                         ),
                         Text(
@@ -449,7 +466,7 @@ class _CajaScreenState extends State<CajaScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text('Efectivo Esperado en Cajón', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const Text('Efectivo esperado en cajón', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     Text(
                       '\$${live.expectedCash.toStringAsFixed(2)}',
                       style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900),
@@ -462,22 +479,59 @@ class _CajaScreenState extends State<CajaScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildMiniMetric('Fondo', '\$${live.initialCash.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Ventas Efec.', '+\$${live.cashSales.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Entradas', '+\$${live.cashIn.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Gastos', '-\$${live.cashOut.toStringAsFixed(0)}'),
+                          Expanded(child: _buildMiniMetric('Fondo', '\$${live.initialCash.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Ventas Efec.', '+\$${live.cashSales.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Entradas', '+\$${live.cashIn.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Gastos', '-\$${live.cashOut.toStringAsFixed(0)}')),
                         ],
                       ),
                     ),
                     const SizedBox(height: 14),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💳 Tarjeta: \$${live.cardSales.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('📱 Transf: \$${live.transferSales.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('Total: \$${live.totalSales.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.credit_card, size: 14, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '\$${live.cardSales.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.phone_android, size: 14, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '\$${live.transferSales.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Total: \$${live.totalSales.toStringAsFixed(2)}',
+                            style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 13),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -490,10 +544,10 @@ class _CajaScreenState extends State<CajaScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                      label: const Text('Registrar Gasto', style: TextStyle(color: Colors.red)),
+                      icon: const Icon(Icons.remove_circle_outline, color: AppTheme.danger),
+                      label: const Text('Registrar gasto', style: TextStyle(color: AppTheme.danger)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
+                        side: const BorderSide(color: AppTheme.danger),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: () => _showMovimientoDialog(type: 'salida'),
@@ -518,9 +572,9 @@ class _CajaScreenState extends State<CajaScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text('Hacer Corte de Caja (Cerrar Turno)'),
+                  label: const Text('Hacer corte de caja (cerrar turno)'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryRed,
+                    backgroundColor: AppTheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () => _showCierreCajaDialog(live),
@@ -530,7 +584,7 @@ class _CajaScreenState extends State<CajaScreen> {
               // Shift Movements List
               if (live.movimientos.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                const Text('Movimientos del Turno', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
+                const Text('Movimientos del turno', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
                 const SizedBox(height: 8),
                 Card(
                   margin: EdgeInsets.zero,
@@ -544,12 +598,12 @@ class _CajaScreenState extends State<CajaScreen> {
                       final isGasto = m.type == 'salida';
                       return ListTile(
                         dense: true,
-                        leading: Icon(isGasto ? Icons.arrow_downward : Icons.arrow_upward, color: isGasto ? Colors.red : AppTheme.successGreen),
+                        leading: Icon(isGasto ? Icons.arrow_downward : Icons.arrow_upward, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
                         title: Text(m.concept, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text(DateFormat('hh:mm a').format(m.timestamp), style: const TextStyle(fontSize: 11)),
                         trailing: Text(
                           '${isGasto ? '-' : '+'}\$${m.amount.toStringAsFixed(2)}',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isGasto ? Colors.red : AppTheme.successGreen),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
                         ),
                       );
                     },
@@ -563,7 +617,7 @@ class _CajaScreenState extends State<CajaScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Historial de Cortes Anteriores', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
+                const Text('Historial de cortes anteriores', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
                 Text('${history.length} cortes', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),
@@ -596,7 +650,7 @@ class _CajaScreenState extends State<CajaScreen> {
                     diffBadgeColor = Colors.blue;
                     diffLabel = 'Sobrante +\$${diff.toStringAsFixed(2)}';
                   } else if (diff < 0) {
-                    diffBadgeColor = Colors.red;
+                    diffBadgeColor = AppTheme.danger;
                     diffLabel = 'Faltante -\$${diff.abs().toStringAsFixed(2)}';
                   }
 
@@ -630,18 +684,35 @@ class _CajaScreenState extends State<CajaScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('${c.ordersCount} órdenes', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                              Text('Venta Total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryRed)),
+                              Text('Venta Total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary)),
                             ],
                           ),
                           const Divider(height: 16),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Esperado: \$${c.expectedCash.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12)),
-                              Text('Contado: \$${(c.actualCashCounted ?? 0).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              Expanded(
+                                child: Text(
+                                  'Esperado: \$${c.expectedCash.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Contado: \$${(c.actualCashCounted ?? 0).toStringAsFixed(2)}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.share, size: 18, color: AppTheme.navyBlue),
                                 tooltip: 'Compartir reporte',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                 onPressed: () => _showCorteResultDialog(c),
                               ),
                             ],
@@ -661,9 +732,21 @@ class _CajaScreenState extends State<CajaScreen> {
   Widget _buildMiniMetric(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white60, fontSize: 10),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

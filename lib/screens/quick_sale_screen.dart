@@ -3,12 +3,14 @@ import '../models/producto.dart';
 import '../models/venta_item.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
+import '../services/caja_service.dart';
 import '../services/pricing_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/promo_badge.dart';
 import '../widgets/cart_bottom_sheet.dart';
 import '../widgets/ticket_dialog.dart';
 import '../widgets/product_customizer_dialog.dart';
+import '../widgets/staff_context_selector.dart';
 
 class QuickSaleScreen extends StatefulWidget {
   const QuickSaleScreen({super.key});
@@ -70,7 +72,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             content: Text('${customItem.quantity}x ${product.name} personalizado agregado a la orden.'),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
-              label: 'Ver Orden',
+              label: 'Ver orden',
               textColor: AppTheme.gold,
               onPressed: _openCartBottomSheet,
             ),
@@ -120,8 +122,14 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
         .fold<int>(0, (sum, i) => sum + i.quantity);
   }
 
-  void _openCartBottomSheet() {
+  Future<void> _openCartBottomSheet() async {
     if (_cartItems.isEmpty) return;
+    final caja = CajaService();
+    if (caja.saleContext == null) {
+      final selected = await selectStaffContext(context, caja);
+      if (!selected || !mounted) return;
+    }
+    final saleContext = caja.saleContext!;
 
     showModalBottomSheet(
       context: context,
@@ -165,6 +173,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
         }) async {
           Navigator.pop(ctx);
           final sale = await _salesService.registerSale(
+            saleContext: saleContext,
             items: _cartItems,
             subtotal: calc.subtotal,
             discount: calc.discount,
@@ -234,6 +243,8 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Column(
               children: [
+                const StaffContextBar(),
+                const SizedBox(height: 8),
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
@@ -299,7 +310,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                 width: 64,
                                 height: 64,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDDEFFB),
+                                  color: AppTheme.infoSoft,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: product.imagePath != null
@@ -350,23 +361,28 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          '\$${product.price.toStringAsFixed(2)} MXN',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.navyBlue,
+                                        Flexible(
+                                          child: Text(
+                                            '\$${product.price.toStringAsFixed(2)} MXN',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.navyBlue,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (product.availableExtras.isNotEmpty || product.category == 'Hamburguesas')
+                                        if (product.availableExtras.isNotEmpty || product.category == 'Hamburguesas') ...[
+                                          const SizedBox(width: 4),
                                           InkWell(
                                             onTap: () => _openCustomizer(product),
                                             borderRadius: BorderRadius.circular(6),
                                             child: const Padding(
                                               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               child: Row(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(Icons.tune, size: 14, color: AppTheme.navyBlue),
                                                   SizedBox(width: 4),
@@ -378,6 +394,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                               ),
                                             ),
                                           ),
+                                        ],
                                       ],
                                     ),
                                   ],
@@ -388,7 +405,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                 ElevatedButton(
                                   onPressed: () => _addToCart(product),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryRed,
+                                    backgroundColor: AppTheme.primary,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
                                     padding: EdgeInsets.zero,
@@ -403,7 +420,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Material(
-                                      color: const Color(0xFFDDEFFB),
+                                      color: AppTheme.infoSoft,
                                       borderRadius: BorderRadius.circular(10),
                                       child: InkWell(
                                         onTap: () => _decrementCart(product.id),
@@ -426,7 +443,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                       ),
                                     ),
                                     Material(
-                                      color: AppTheme.primaryRed,
+                                      color: AppTheme.primary,
                                       borderRadius: BorderRadius.circular(10),
                                       child: InkWell(
                                         onTap: () => _incrementCart(product.id),
@@ -467,7 +484,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -482,7 +499,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Total de la Orden',
+                            'Total de la orden',
                             style: TextStyle(color: Colors.white70, fontSize: 12),
                           ),
                           Text(
@@ -497,7 +514,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                       icon: const Icon(Icons.arrow_forward, size: 18),
                       label: const Text('Ver Orden'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

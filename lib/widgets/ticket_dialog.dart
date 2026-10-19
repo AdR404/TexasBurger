@@ -13,11 +13,15 @@ class TicketDialog extends StatelessWidget {
   });
 
   String _generateTicketText() {
-    final dateFormat = DateFormat('dd/MM/yyyy hh:mm a');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('HH:mm:ss');
     final buffer = StringBuffer();
-    buffer.writeln('🍔 *TEXAS BURGER* 🍔');
+    buffer.writeln('🍔 *${venta.companyName}* 🍔');
     buffer.writeln('Ticket #${venta.ticketNumber}');
+    buffer.writeln('Sucursal: ${venta.branchName}');
+    buffer.writeln('Atendido por: ${venta.employeeName}');
     buffer.writeln('Fecha: ${dateFormat.format(venta.timestamp)}');
+    buffer.writeln('Hora: ${timeFormat.format(venta.timestamp)}');
     buffer.writeln('Modalidad: ${venta.orderTypeBadge}');
     if (venta.deliveryAddress != null && venta.deliveryAddress!.isNotEmpty) {
       buffer.writeln('Dirección: ${venta.deliveryAddress}');
@@ -48,7 +52,8 @@ class TicketDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy hh:mm a');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('HH:mm:ss');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -63,10 +68,10 @@ class TicketDialog extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: const BoxDecoration(
-                  color: AppTheme.lightRed,
+                  color: AppTheme.successSoft,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryRed, size: 36),
+                child: const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 36),
               ),
               const SizedBox(height: 10),
               const Text(
@@ -79,15 +84,33 @@ class TicketDialog extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
+                venta.companyName,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.navyBlue),
+              ),
+              Text(
                 'Ticket #${venta.ticketNumber}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryRed,
+                  color: AppTheme.primary,
                 ),
               ),
               Text(
-                dateFormat.format(venta.timestamp),
+                'Sucursal: ${venta.branchName}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Atendido por: ${venta.employeeName}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Fecha: ${dateFormat.format(venta.timestamp)}',
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Hora: ${timeFormat.format(venta.timestamp)}',
                 style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 10),
@@ -146,7 +169,7 @@ class TicketDialog extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 20, top: 2),
                         child: Text(
                           item.customizationSummary,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.primaryRed, fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontSize: 11, color: AppTheme.infoBlue, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ],
@@ -168,8 +191,8 @@ class TicketDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
-                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600)),
+                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -184,7 +207,7 @@ class TicketDialog extends StatelessWidget {
                   ),
                   Text(
                     '\$${venta.total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primaryRed),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primary),
                   ),
                 ],
               ),
@@ -231,7 +254,7 @@ class TicketDialog extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text('Aceptar', style: TextStyle(fontSize: 13)),

@@ -54,12 +54,12 @@ class SaleChart extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: amount,
-              color: amount > 0 ? AppTheme.primaryRed : Colors.grey.shade300,
+              color: amount > 0 ? AppTheme.primary : Colors.grey.shade300,
               width: 14,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
               gradient: amount > 0
                   ? const LinearGradient(
-                      colors: [AppTheme.primaryRed, AppTheme.gold],
+                      colors: [AppTheme.primary, AppTheme.gold],
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                     )
@@ -91,14 +91,14 @@ class SaleChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ventas por Hora (\$)',
+                'Ventas por hora (\$)',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.navyBlue,
                 ),
               ),
-              Icon(Icons.show_chart_rounded, color: AppTheme.primaryRed, size: 20),
+              Icon(Icons.show_chart_rounded, color: AppTheme.primary, size: 20),
             ],
           ),
           const SizedBox(height: 20),

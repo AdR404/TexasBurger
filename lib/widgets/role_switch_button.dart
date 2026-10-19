@@ -67,7 +67,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Modo Administrador',
+                          'Modo administrador',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -99,17 +99,17 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                         ),
                         margin: const EdgeInsets.only(bottom: 14),
                         decoration: BoxDecoration(
-                          color: AppTheme.lightRed,
+                          color: AppTheme.dangerSoft,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppTheme.primaryRed.withValues(alpha: 0.3),
+                            color: AppTheme.danger.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           children: [
                             const Icon(
                               Icons.error_outline,
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.danger,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -117,7 +117,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                               child: Text(
                                 errorMessage!,
                                 style: const TextStyle(
-                                  color: AppTheme.primaryRed,
+                                  color: AppTheme.danger,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -188,7 +188,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                                   Icon(Icons.verified, color: AppTheme.gold),
                                   SizedBox(width: 10),
                                   Text(
-                                    'Modo Administrador activado con éxito.',
+                                    'Modo administrador activado con éxito.',
                                     style: TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -240,7 +240,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                               Icon(Icons.verified, color: AppTheme.gold),
                               SizedBox(width: 10),
                               Text(
-                                'Modo Administrador activado con éxito.',
+                                'Modo administrador activado con éxito.',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -256,7 +256,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                     }
                   },
                   icon: const Icon(Icons.login, size: 18),
-                  label: const Text('Entrar como Admin'),
+                  label: const Text('Entrar como admin'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.navyBlue,
                     foregroundColor: Colors.white,
@@ -284,7 +284,9 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
           children: [
             Icon(Icons.person_outline, color: AppTheme.navyBlue),
             SizedBox(width: 10),
-            Text('Cambiar a Modo Usuario'),
+            Expanded(
+              child: Text('Cambiar a modo usuario'),
+            ),
           ],
         ),
         content: const Text(
@@ -305,7 +307,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                     children: [
                       Icon(Icons.info_outline, color: Colors.white),
                       SizedBox(width: 10),
-                      Text('Has regresado a la vista de Usuario.'),
+                      Text('Has regresado a la vista de usuario.'),
                     ],
                   ),
                   duration: Duration(seconds: 2),
@@ -319,7 +321,7 @@ class _RoleSwitchButtonState extends State<RoleSwitchButton> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Cambiar a Usuario'),
+            child: const Text('Cambiar a usuario'),
           ),
         ],
       ),

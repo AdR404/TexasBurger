@@ -47,7 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          'Modificar Precio: ${p.name}',
+          'Modificar precio: ${p.name}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -100,11 +100,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Icon(
                 isPromo ? Icons.star_rate_rounded : Icons.add_circle_outline,
-                color: AppTheme.primaryRed,
+                color: AppTheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
-                isPromo ? 'Nueva Promoción' : 'Nuevo Producto',
+                isPromo ? 'Nueva promoción' : 'Nuevo producto',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ],
@@ -175,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   value: isPromo,
-                  activeThumbColor: AppTheme.primaryRed,
+                  activeThumbColor: AppTheme.primary,
                   onChanged: (val) {
                     setDialogState(() {
                       isPromo = val;
@@ -238,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryRed,
+                backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Guardar'),
@@ -304,8 +304,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           isAdmin
-                              ? 'Modo Administrador Activo'
-                              : 'Modo Usuario (Solo Lectura del Menú)',
+                              ? 'Modo administrador activo'
+                              : 'Modo usuario (solo lectura del menú)',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -360,7 +360,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.lunch_dining,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primary,
                           size: 40,
                         ),
                       ),
@@ -384,14 +384,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'Deliciosamente asadas al carbón',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.primaryRed,
+                            color: AppTheme.brand,
                             fontWeight: FontWeight.bold,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'EST. 1995 • Sistema Punto de Venta',
+                          'Est. 1995 • Sistema punto de venta',
                           style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
@@ -409,8 +409,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: Text(
                     isAdmin
-                        ? 'Administración del Menú y Precios'
-                        : 'Catálogo del Menú (Precios Vigentes)',
+                        ? 'Administración del menú y precios'
+                        : 'Catálogo del menú (precios vigentes)',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -423,11 +423,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: _showAddProductOrPromoDialog,
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text(
-                      'Añadir Item / Promo',
+                      'Añadir artículo / promo',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryRed,
+                      backgroundColor: AppTheme.primary,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -455,7 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     leading: CircleAvatar(
-                      backgroundColor: p.isPromo ? AppTheme.lightRed : AppTheme.creamBg,
+                      backgroundColor: p.isPromo ? AppTheme.promoSoft : AppTheme.creamBg,
                       child: Icon(
                         p.isPromo
                             ? Icons.star_rate_rounded
@@ -464,7 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 : p.category == 'Bebidas'
                                     ? Icons.local_drink_rounded
                                     : Icons.lunch_dining_rounded,
-                        color: p.isPromo ? AppTheme.primaryRed : AppTheme.navyBlue,
+                        color: p.isPromo ? AppTheme.promo : AppTheme.navyBlue,
                         size: 20,
                       ),
                     ),
@@ -480,7 +480,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppTheme.lightRed,
+                              color: AppTheme.promoSoft,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -488,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryRed,
+                                color: AppTheme.promo,
                               ),
                             ),
                           ),
@@ -497,7 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(
                       '\$${p.price.toStringAsFixed(2)} MXN • ${p.category}',
                       style: const TextStyle(
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -510,10 +510,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.navyBlue),
                                 onPressed: () => _showEditPriceDialog(p),
                                 tooltip: 'Editar precio',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                               ),
                               Switch(
                                 value: p.isAvailable,
-                                activeThumbColor: AppTheme.primaryRed,
+                                activeThumbColor: AppTheme.primary,
                                 onChanged: (val) => _productService.toggleAvailability(p.id),
                               ),
                             ],
@@ -521,7 +524,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: p.isAvailable ? Colors.green.shade50 : Colors.red.shade50,
+                              color: p.isAvailable ? Colors.green.shade50 : AppTheme.dangerSoft,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -529,7 +532,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: p.isAvailable ? Colors.green.shade700 : Colors.red.shade700,
+                                color: p.isAvailable ? Colors.green.shade700 : AppTheme.danger,
                               ),
                             ),
                           ),
@@ -542,7 +545,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Opciones y Datos: Solo visibles para Admin
             if (isAdmin) ...[
               const Text(
-                'Opciones y Datos (Solo Administrador)',
+                'Opciones y datos (solo administrador)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -559,14 +562,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
-                        title: const Text('Cargar Ventas de Demostración'),
-                        subtitle: const Text('Genera ventas de ejemplo para visualizar el Dashboard'),
+                        title: const Text('Cargar ventas de demostración'),
+                        subtitle: const Text('Genera ventas de ejemplo para visualizar el panel'),
                         trailing: ElevatedButton(
                           onPressed: () async {
                             final scaffold = ScaffoldMessenger.of(context);
                             await _salesService.loadSampleSales(_productService.products);
                             scaffold.showSnackBar(
-                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el Dashboard.')),
+                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el panel.')),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -580,7 +583,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.refresh_rounded, color: AppTheme.infoBlue),
-                        title: const Text('Restablecer Menú Original'),
+                        title: const Text('Restablecer menú original'),
                         subtitle: const Text('Restaura los 10 productos y precios iniciales'),
                         trailing: OutlinedButton(
                           onPressed: () async {
@@ -596,13 +599,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.delete_outline, color: Colors.red),
-                        title: const Text('Limpiar Historial de Ventas'),
+                        leading: const Icon(Icons.delete_outline, color: AppTheme.danger),
+                        title: const Text('Limpiar historial de ventas'),
                         subtitle: const Text('Elimina todas las ventas guardadas localmente'),
                         trailing: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
+                            foregroundColor: AppTheme.danger,
+                            side: const BorderSide(color: AppTheme.danger),
                           ),
                           onPressed: () async {
                             final scaffold = ScaffoldMessenger.of(context);

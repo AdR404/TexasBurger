@@ -68,8 +68,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.file_download_outlined, color: AppTheme.primaryRed),
-                  tooltip: 'Exportar Ventas del Periodo',
+                  icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
+                  tooltip: 'Exportar ventas del periodo',
                   onPressed: () {
                     final pSales = DashboardService.filterSales(sales, _selectedPeriod);
                     showDialog(
@@ -90,7 +90,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.navyBlue, Color(0xFF1B3B6F)],
+                  colors: [AppTheme.navyBlue, AppTheme.navyBlueLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -110,7 +110,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Total Vendido',
+                        'Total vendido',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -124,7 +124,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${metrics.totalTickets} Tickets',
+                          '${metrics.totalTickets} tickets',
                           style: const TextStyle(
                             color: AppTheme.navyBlue,
                             fontSize: 12,
@@ -148,11 +148,10 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   const Divider(color: Colors.white24, height: 1),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildHeroSubmetric('Ticket Promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}'),
-                      _buildHeroSubmetric('Ticket Más Alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}'),
-                      _buildHeroSubmetric('Hamburguesas', '${metrics.totalHamburguesas} pzas'),
+                      Expanded(child: _buildHeroSubmetric('Ticket promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Ticket más alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Hamburguesas', '${metrics.totalHamburguesas} pzas', alignEnd: true)),
                     ],
                   ),
                 ],
@@ -162,7 +161,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
 
             // Metrics Grid
             const Text(
-              'Métricas Clave',
+              'Métricas clave',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -179,14 +178,14 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               childAspectRatio: 1.45,
               children: [
                 MetricCard(
-                  title: 'Venta Máxima',
+                  title: 'Venta máxima',
                   value: '\$${metrics.ventaMaxima.toStringAsFixed(2)}',
                   subtitle: 'Ticket récord del periodo',
                   icon: Icons.emoji_events_rounded,
                   accentColor: AppTheme.gold,
                 ),
                 MetricCard(
-                  title: 'Primera Venta',
+                  title: 'Primera venta',
                   value: '\$${metrics.primeraVenta.toStringAsFixed(2)}',
                   subtitle: 'Apertura de turno',
                   icon: Icons.wb_sunny_rounded,
@@ -204,7 +203,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   value: metrics.promedioHamburguesasPorVenta.toStringAsFixed(1),
                   subtitle: 'Unidades promedio',
                   icon: Icons.lunch_dining_rounded,
-                  accentColor: AppTheme.primaryRed,
+                  accentColor: AppTheme.primary,
                 ),
               ],
             ),
@@ -212,7 +211,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
 
             // Payment Methods Breakdown
             const Text(
-              'Desglose por Método de Pago',
+              'Desglose por método de pago',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -270,10 +269,10 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppTheme.lightRed,
+                              color: AppTheme.primarySoft,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.lunch_dining, size: 16, color: AppTheme.primaryRed),
+                            child: const Icon(Icons.lunch_dining, size: 16, color: AppTheme.primary),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -322,7 +321,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryRed : Colors.transparent,
+            color: isSelected ? AppTheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -340,13 +339,16 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
     );
   }
 
-  Widget _buildHeroSubmetric(String label, String value) {
+  Widget _buildHeroSubmetric(String label, String value, {bool alignEnd = false}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: const TextStyle(color: Colors.white60, fontSize: 11),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
         ),
         const SizedBox(height: 2),
         Text(
@@ -356,6 +358,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

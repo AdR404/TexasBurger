@@ -72,7 +72,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Método de Pago',
+          'Método de pago',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -108,7 +108,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.primaryRed, width: 2),
+                      borderSide: const BorderSide(color: AppTheme.primary, width: 2),
                     ),
                   ),
                   onChanged: (val) {
@@ -126,7 +126,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _change > 0 ? const Color(0xFFECFDF5) : Colors.grey.shade100,
+                    color: _change > 0 ? AppTheme.successSoft : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _change > 0 ? AppTheme.successGreen : AppTheme.borderLight,
@@ -183,16 +183,16 @@ class _PaymentSelectorState extends State<PaymentSelector> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryRed : Colors.white,
+            color: isSelected ? AppTheme.primary : Colors.white,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: isSelected ? AppTheme.primaryRed : Colors.white,
+              color: isSelected ? AppTheme.primary : Colors.white,
               width: 1.5,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryRed.withValues(alpha: 0.3),
+                      color: AppTheme.primary.withValues(alpha: 0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     )
@@ -200,6 +200,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
                 : [],
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
@@ -210,12 +211,13 @@ class _PaymentSelectorState extends State<PaymentSelector> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   color: isSelected ? Colors.white : AppTheme.navyBlue,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
             ],
           ),

@@ -45,13 +45,13 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   List<String> get _subtitles => [
-    'Punto de Venta / Venta Rápida',
-    'Métricas Diarias y Rendimiento',
-    'Historial de Tickets y Órdenes',
-    'Arqueo de Turno y Control de Efectivo',
+    'Punto de venta / venta rápida',
+    'Métricas diarias y rendimiento',
+    'Historial de tickets y órdenes',
+    'Arqueo de turno y control de efectivo',
     _roleService.isAdmin
-        ? 'Configuración y Administración del Menú'
-        : 'Catálogo del Menú (Modo Consulta)',
+        ? 'Configuración y administración del menú'
+        : 'Catálogo del menú (modo consulta)',
   ];
 
   @override
@@ -87,29 +87,29 @@ class _HomeScreenState extends State<HomeScreen> {
           destinations: [
             const NavigationDestination(
               icon: Icon(Icons.point_of_sale_outlined),
-              selectedIcon: Icon(Icons.point_of_sale, color: AppTheme.primaryRed),
+              selectedIcon: Icon(Icons.point_of_sale, color: AppTheme.primary),
               label: 'Venta',
             ),
-            const NavigationDestination(
+            /*const NavigationDestination(
               icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics, color: AppTheme.primaryRed),
+              selectedIcon: Icon(Icons.analytics, color: AppTheme.primary),
               label: 'Dashboard',
-            ),
+            ),*/
             const NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long, color: AppTheme.primaryRed),
+              selectedIcon: Icon(Icons.receipt_long, color: AppTheme.primary),
               label: 'Historial',
             ),
             const NavigationDestination(
               icon: Icon(Icons.savings_outlined),
-              selectedIcon: Icon(Icons.savings, color: AppTheme.primaryRed),
+              selectedIcon: Icon(Icons.savings, color: AppTheme.primary),
               label: 'Caja',
             ),
             NavigationDestination(
               icon: Icon(
                 _roleService.isAdmin ? Icons.menu_book_outlined : Icons.menu_book,
               ),
-              selectedIcon: const Icon(Icons.menu_book, color: AppTheme.primaryRed),
+              selectedIcon: const Icon(Icons.menu_book, color: AppTheme.primary),
               label: _roleService.isAdmin ? 'Menú' : 'Catálogo',
             ),
           ],

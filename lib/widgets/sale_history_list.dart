@@ -37,7 +37,7 @@ class SaleHistoryList extends StatelessWidget {
       );
     }
 
-    final timeFormat = DateFormat('hh:mm a');
+    final timeFormat = DateFormat('HH:mm:ss');
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     return ListView.separated(
@@ -46,7 +46,6 @@ class SaleHistoryList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final venta = sales[index];
-        final isToday = DateUtils.isSameDay(venta.timestamp, DateTime.now());
 
         return Card(
           margin: EdgeInsets.zero,
@@ -85,17 +84,22 @@ class SaleHistoryList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
                           children: [
-                            Text(
-                              isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.navyBlue,
+                            Flexible(
+                              child: Text(
+                                isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.navyBlue,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -115,8 +119,16 @@ class SaleHistoryList extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
+                          '${venta.companyName} • ${venta.branchName}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.navyBlue),
+                        ),
+                        Text(
+                          'Atendido por: ${venta.employeeName}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        ),
+                        Text(
                           venta.orderTypeBadge,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primaryRed),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -137,7 +149,7 @@ class SaleHistoryList extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primary,
                         ),
                       ),
                       Text(
@@ -157,14 +169,14 @@ class SaleHistoryList extends StatelessWidget {
 
   Color _getMethodColor(String method) {
     if (method.toLowerCase().contains('efectivo')) return AppTheme.navyBlue;
-    if (method.toLowerCase().contains('transfer')) return const Color(0xFF7A4B00);
+    if (method.toLowerCase().contains('transfer')) return AppTheme.goldDark;
     if (method.toLowerCase().contains('tarjeta')) return AppTheme.infoBlue;
     return AppTheme.gold;
   }
 
   Color _getMethodBg(String method) {
-    if (method.toLowerCase().contains('efectivo')) return const Color(0xFFDDEFFB);
-    if (method.toLowerCase().contains('transfer')) return const Color(0xFFFFF1B8);
+    if (method.toLowerCase().contains('efectivo')) return AppTheme.infoSoft;
+    if (method.toLowerCase().contains('transfer')) return AppTheme.goldSoft;
     return _getMethodColor(method).withValues(alpha: 0.12);
   }
 }

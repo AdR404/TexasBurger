@@ -90,11 +90,11 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIcon: Icon(Icons.point_of_sale, color: AppTheme.primary),
               label: 'Venta',
             ),
-            const NavigationDestination(
+            /*const NavigationDestination(
               icon: Icon(Icons.analytics_outlined),
               selectedIcon: Icon(Icons.analytics, color: AppTheme.primary),
               label: 'Dashboard',
-            ),
+            ),*/
             const NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),
               selectedIcon: Icon(Icons.receipt_long, color: AppTheme.primary),

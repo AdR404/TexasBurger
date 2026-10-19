@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/corte_caja.dart';
+import '../models/sale_context.dart';
 import '../services/caja_service.dart';
 import '../services/sales_service.dart';
 import '../services/export_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/staff_context_selector.dart';
 
 class CajaScreen extends StatefulWidget {
   const CajaScreen({super.key});
@@ -39,6 +41,8 @@ class _CajaScreenState extends State<CajaScreen> {
   void _showAbrirCajaDialog() {
     final controller = TextEditingController(text: '500');
     final presets = [300, 500, 800, 1000, 1500];
+    SaleContext? selection = _cajaService.saleContext;
+    bool opening = false;
 
     showDialog(
       context: context,
@@ -52,10 +56,15 @@ class _CajaScreenState extends State<CajaScreen> {
               Text('Apertura de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
-          content: Column(
+          content: SingleChildScrollView(child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              StaffContextSelector(
+                initialSelection: _cajaService.saleContext,
+                onChanged: (value) => setDialogState(() => selection = value),
+              ),
+              const SizedBox(height: 16),
               const Text('Ingresa el monto del fondo inicial en efectivo para cambio:'),
               const SizedBox(height: 14),
               TextField(
@@ -84,16 +93,17 @@ class _CajaScreenState extends State<CajaScreen> {
                 )).toList(),
               ),
             ],
-          ),
+          )),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: selection == null || opening ? null : () async {
+                setDialogState(() => opening = true);
                 final amount = double.tryParse(controller.text) ?? 0.0;
-                await _cajaService.abrirCaja(amount);
+                await _cajaService.abrirCaja(amount, saleContext: selection!);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Iniciar Turno'),
@@ -370,6 +380,8 @@ class _CajaScreenState extends State<CajaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const StaffContextBar(),
+            const SizedBox(height: 12),
             // Status Card
             if (!isOpen) ...[
               Container(

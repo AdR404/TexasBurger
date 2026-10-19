@@ -1,3 +1,5 @@
+import 'sale_context.dart';
+
 class CajaMovimiento {
   final String id;
   final String type; // 'entrada', 'salida'
@@ -32,6 +34,8 @@ class CajaMovimiento {
 
 class CorteCaja {
   final String id;
+  /// Opening employee only; each sale records its own attending employee.
+  final SaleContext? openingContext;
   final DateTime openedAt;
   final DateTime? closedAt;
   final double initialCash;
@@ -51,6 +55,7 @@ class CorteCaja {
 
   CorteCaja({
     required this.id,
+    this.openingContext,
     required this.openedAt,
     this.closedAt,
     required this.initialCash,
@@ -72,6 +77,7 @@ class CorteCaja {
   Map<String, dynamic> toJson() => {
     'id': id,
     'openedAt': openedAt.toIso8601String(),
+    'openingContext': openingContext?.toJson(),
     'closedAt': closedAt?.toIso8601String(),
     'initialCash': initialCash,
     'cashIn': cashIn,
@@ -91,6 +97,9 @@ class CorteCaja {
 
   factory CorteCaja.fromJson(Map<String, dynamic> json) => CorteCaja(
     id: json['id'] as String,
+    openingContext: json['openingContext'] == null
+        ? null
+        : SaleContext.fromJson(json['openingContext'] as Map<String, dynamic>),
     openedAt: DateTime.parse(json['openedAt'] as String),
     closedAt: json['closedAt'] != null ? DateTime.parse(json['closedAt'] as String) : null,
     initialCash: (json['initialCash'] as num).toDouble(),

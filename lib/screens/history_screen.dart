@@ -98,13 +98,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
                         _selectedDate == null ? Icons.calendar_today_outlined : Icons.calendar_month,
                         color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.infoBlue,
                       ),
                       tooltip: 'Filtrar por fecha',
+                      visualDensity: VisualDensity.compact,
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -120,22 +121,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     if (_selectedDate != null)
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.grey),
+                        visualDensity: VisualDensity.compact,
                         onPressed: () => setState(() => _selectedDate = null),
                       ),
                     IconButton(
                       icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                       tooltip: 'Exportar a CSV o WhatsApp',
+                      visualDensity: VisualDensity.compact,
                       onPressed: () => _showExportDialog(filteredSales),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${filteredSales.length} ventas encontradas',
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                    Expanded(
+                      child: Text(
+                        '${filteredSales.length} ventas encontradas',
+                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     Text(
                       'Total: \$${totalAmount.toStringAsFixed(2)}',

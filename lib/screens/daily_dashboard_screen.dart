@@ -148,11 +148,10 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   const Divider(color: Colors.white24, height: 1),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildHeroSubmetric('Ticket Promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}'),
-                      _buildHeroSubmetric('Ticket Más Alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}'),
-                      _buildHeroSubmetric('Hamburguesas', '${metrics.totalHamburguesas} pzas'),
+                      Expanded(child: _buildHeroSubmetric('Ticket Promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Ticket Más Alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Hamburguesas', '${metrics.totalHamburguesas} pzas', alignEnd: true)),
                     ],
                   ),
                 ],
@@ -340,13 +339,16 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
     );
   }
 
-  Widget _buildHeroSubmetric(String label, String value) {
+  Widget _buildHeroSubmetric(String label, String value, {bool alignEnd = false}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: const TextStyle(color: Colors.white60, fontSize: 11),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
         ),
         const SizedBox(height: 2),
         Text(
@@ -356,6 +358,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

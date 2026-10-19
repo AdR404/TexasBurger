@@ -200,6 +200,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
                 : [],
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
@@ -210,12 +211,13 @@ class _PaymentSelectorState extends State<PaymentSelector> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   color: isSelected ? Colors.white : AppTheme.navyBlue,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
             ],
           ),

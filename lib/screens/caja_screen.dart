@@ -127,7 +127,12 @@ class _CajaScreenState extends State<CajaScreen> {
           children: [
             Icon(isGasto ? Icons.remove_circle : Icons.add_circle, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
             const SizedBox(width: 8),
-            Text(isGasto ? 'Registrar Gasto / Salida' : 'Registrar Entrada de Efectivo', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Text(
+                isGasto ? 'Registrar Gasto / Salida' : 'Registrar Entrada de Efectivo',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -474,22 +479,59 @@ class _CajaScreenState extends State<CajaScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildMiniMetric('Fondo', '\$${live.initialCash.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Ventas Efec.', '+\$${live.cashSales.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Entradas', '+\$${live.cashIn.toStringAsFixed(0)}'),
-                          _buildMiniMetric('Gastos', '-\$${live.cashOut.toStringAsFixed(0)}'),
+                          Expanded(child: _buildMiniMetric('Fondo', '\$${live.initialCash.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Ventas Efec.', '+\$${live.cashSales.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Entradas', '+\$${live.cashIn.toStringAsFixed(0)}')),
+                          Expanded(child: _buildMiniMetric('Gastos', '-\$${live.cashOut.toStringAsFixed(0)}')),
                         ],
                       ),
                     ),
                     const SizedBox(height: 14),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('💳 Tarjeta: \$${live.cardSales.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('📱 Transf: \$${live.transferSales.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('Total: \$${live.totalSales.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.credit_card, size: 14, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '\$${live.cardSales.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.phone_android, size: 14, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '\$${live.transferSales.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Total: \$${live.totalSales.toStringAsFixed(2)}',
+                            style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 13),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -647,13 +689,30 @@ class _CajaScreenState extends State<CajaScreen> {
                           ),
                           const Divider(height: 16),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Esperado: \$${c.expectedCash.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12)),
-                              Text('Contado: \$${(c.actualCashCounted ?? 0).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              Expanded(
+                                child: Text(
+                                  'Esperado: \$${c.expectedCash.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Contado: \$${(c.actualCashCounted ?? 0).toStringAsFixed(2)}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.share, size: 18, color: AppTheme.navyBlue),
                                 tooltip: 'Compartir reporte',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                                 onPressed: () => _showCorteResultDialog(c),
                               ),
                             ],
@@ -673,9 +732,21 @@ class _CajaScreenState extends State<CajaScreen> {
   Widget _buildMiniMetric(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white60, fontSize: 10),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

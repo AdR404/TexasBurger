@@ -510,6 +510,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.navyBlue),
                                 onPressed: () => _showEditPriceDialog(p),
                                 tooltip: 'Editar precio',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                               ),
                               Switch(
                                 value: p.isAvailable,

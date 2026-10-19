@@ -256,7 +256,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               itemBuilder: (context, index) {
                 final item = widget.cartItems[index];
                 return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -281,14 +281,19 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                       ),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline, color: AppTheme.primary, size: 20),
                           onPressed: () => widget.onDecrement(item.product.id),
                         ),
-                        Text(
-                          '${item.quantity}',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        SizedBox(
+                          width: 24,
+                          child: Text(
+                            '${item.quantity}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
@@ -296,8 +301,9 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                         ),
                       ],
                     ),
-                    SizedBox(
-                      width: 65,
+                    const SizedBox(width: 4),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 56),
                       child: Text(
                         '\$${item.subtotal.toStringAsFixed(2)}',
                         style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),

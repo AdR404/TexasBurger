@@ -35,6 +35,7 @@ class BootstrapService {
         isPromo: true,
         promoNote: 'Válido martes o promo especial',
         availableExtras: burgerExtras,
+        imagePath: 'assets/images/combos/promo_martes.png',
       ),
       Producto(
         id: 'combo_pollo_especial',
@@ -45,6 +46,7 @@ class BootstrapService {
         isPromo: true,
         promoNote: 'Combo con papas y refresco',
         availableExtras: burgerExtras,
+        imagePath: 'assets/images/combos/combo_pollo_especial.png',
       ),
 
       // HAMBURGUESAS

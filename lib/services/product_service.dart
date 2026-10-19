@@ -54,6 +54,12 @@ class ProductService extends ChangeNotifier {
               addedNew = true;
             }
           }
+          // Agrega la ruta de imagen a productos ya guardados que aún no la tienen
+          final idx = _products.indexWhere((p) => p.id == def.id);
+          if (idx != -1 && _products[idx].imagePath == null && def.imagePath != null) {
+            _products[idx] = _products[idx].copyWith(imagePath: def.imagePath);
+            addedNew = true;
+          }
         }
         if (addedNew) {
           await _save();

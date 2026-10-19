@@ -10,6 +10,7 @@ class Producto {
   final String? promoNote;
   final bool isAvailable;
   final List<ProductoExtra> availableExtras;
+  final String? imagePath;
 
   Producto({
     required this.id,
@@ -21,6 +22,7 @@ class Producto {
     this.promoNote,
     this.isAvailable = true,
     this.availableExtras = const [],
+    this.imagePath,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +35,7 @@ class Producto {
     'promoNote': promoNote,
     'isAvailable': isAvailable,
     'availableExtras': availableExtras.map((e) => e.toJson()).toList(),
+    'imagePath': imagePath,
   };
 
   factory Producto.fromJson(Map<String, dynamic> json) => Producto(
@@ -48,6 +51,7 @@ class Producto {
             ?.map((e) => ProductoExtra.fromJson(e as Map<String, dynamic>))
             .toList() ??
         const [],
+    imagePath: json['imagePath'] as String?,
   );
 
   Producto copyWith({
@@ -60,6 +64,7 @@ class Producto {
     String? promoNote,
     bool? isAvailable,
     List<ProductoExtra>? availableExtras,
+    String? imagePath,
   }) => Producto(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -70,5 +75,6 @@ class Producto {
     promoNote: promoNote ?? this.promoNote,
     isAvailable: isAvailable ?? this.isAvailable,
     availableExtras: availableExtras ?? this.availableExtras,
+    imagePath: imagePath ?? this.imagePath,
   );
 }

@@ -307,17 +307,30 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Container(
-                                width: 48,
-                                height: 48,
+                                width: 64,
+                                height: 64,
                                 decoration: BoxDecoration(
                                   color: AppTheme.infoSoft,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Icon(
-                                  icon,
-                                  color: product.isPromo ? AppTheme.promo : AppTheme.navyBlue,
-                                  size: 26,
-                                ),
+                                child: product.imagePath != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.asset(
+                                          product.imagePath!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Icon(
+                                            icon,
+                                            color: product.isPromo ? AppTheme.primaryRed : AppTheme.navyBlue,
+                                            size: 26,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        icon,
+                                        color: product.isPromo ? AppTheme.primaryRed : AppTheme.navyBlue,
+                                        size: 26,
+                                      ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(

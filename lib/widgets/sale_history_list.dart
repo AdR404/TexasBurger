@@ -39,6 +39,7 @@ class SaleHistoryList extends StatelessWidget {
 
     final timeFormat = DateFormat('HH:mm:ss');
     final dateFormat = DateFormat('dd/MM/yyyy');
+    final now = DateTime.now();
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -46,6 +47,9 @@ class SaleHistoryList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final venta = sales[index];
+        final isToday = venta.timestamp.year == now.year &&
+            venta.timestamp.month == now.month &&
+            venta.timestamp.day == now.day;
 
         return Card(
           margin: EdgeInsets.zero,

@@ -28,6 +28,7 @@ class TexasHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -64,15 +65,17 @@ class TexasHeader extends StatelessWidget {
                       children: [
                         const Icon(Icons.calendar_month, size: 14, color: AppTheme.navyBlue),
                         const SizedBox(width: 6),
-                        Text(
-                          subtitle ?? _fechaHoy(),
-                          style: const TextStyle(
-                            color: AppTheme.navyBlue,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                        Flexible(
+                          child: Text(
+                            subtitle ?? _fechaHoy(),
+                            style: const TextStyle(
+                              color: AppTheme.navyBlue,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

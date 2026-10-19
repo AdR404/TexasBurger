@@ -37,7 +37,7 @@ class SaleHistoryList extends StatelessWidget {
       );
     }
 
-    final timeFormat = DateFormat('hh:mm a');
+    final timeFormat = DateFormat('HH:mm:ss');
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     return ListView.separated(
@@ -46,7 +46,6 @@ class SaleHistoryList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final venta = sales[index];
-        final isToday = DateUtils.isSameDay(venta.timestamp, DateTime.now());
 
         return Card(
           margin: EdgeInsets.zero,
@@ -85,17 +84,18 @@ class SaleHistoryList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
                           children: [
                             Text(
-                              isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
+                              '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.navyBlue,
                               ),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -114,6 +114,14 @@ class SaleHistoryList extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 3),
+                        Text(
+                          '${venta.companyName} • ${venta.branchName}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.navyBlue),
+                        ),
+                        Text(
+                          'Atendido por: ${venta.employeeName}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        ),
                         Text(
                           venta.orderTypeBadge,
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary),

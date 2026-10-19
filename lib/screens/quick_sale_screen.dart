@@ -3,12 +3,14 @@ import '../models/producto.dart';
 import '../models/venta_item.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
+import '../services/caja_service.dart';
 import '../services/pricing_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/promo_badge.dart';
 import '../widgets/cart_bottom_sheet.dart';
 import '../widgets/ticket_dialog.dart';
 import '../widgets/product_customizer_dialog.dart';
+import '../widgets/staff_context_selector.dart';
 
 class QuickSaleScreen extends StatefulWidget {
   const QuickSaleScreen({super.key});
@@ -120,8 +122,14 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
         .fold<int>(0, (sum, i) => sum + i.quantity);
   }
 
-  void _openCartBottomSheet() {
+  Future<void> _openCartBottomSheet() async {
     if (_cartItems.isEmpty) return;
+    final caja = CajaService();
+    if (caja.saleContext == null) {
+      final selected = await selectStaffContext(context, caja);
+      if (!selected || !mounted) return;
+    }
+    final saleContext = caja.saleContext!;
 
     showModalBottomSheet(
       context: context,
@@ -165,6 +173,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
         }) async {
           Navigator.pop(ctx);
           final sale = await _salesService.registerSale(
+            saleContext: saleContext,
             items: _cartItems,
             subtotal: calc.subtotal,
             discount: calc.discount,
@@ -234,6 +243,8 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Column(
               children: [
+                const StaffContextBar(),
+                const SizedBox(height: 8),
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(

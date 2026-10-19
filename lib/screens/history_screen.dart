@@ -62,7 +62,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final matchOrderType = sale.orderType.toLowerCase().contains(q);
         final matchCustomer = (sale.customerName ?? '').toLowerCase().contains(q);
         final matchProducts = sale.items.any((i) => i.product.name.toLowerCase().contains(q));
-        return matchTicket || matchMethod || matchOrderType || matchCustomer || matchProducts;
+        final matchStaff = sale.branchName.toLowerCase().contains(q) ||
+            sale.employeeName.toLowerCase().contains(q) ||
+            sale.companyName.toLowerCase().contains(q);
+        return matchTicket || matchMethod || matchOrderType || matchCustomer || matchProducts || matchStaff;
       }
       return true;
     }).toList();
@@ -83,7 +86,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: TextField(
                         onChanged: (val) => setState(() => _searchFilter = val),
                         decoration: InputDecoration(
-                          hintText: 'Buscar por # ticket, cliente, mesa o producto...',
+                          hintText: 'Ticket, cliente, producto, sucursal o empleado...',
                           prefixIcon: const Icon(Icons.search, color: AppTheme.navyBlue),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           filled: true,

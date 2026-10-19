@@ -13,11 +13,15 @@ class TicketDialog extends StatelessWidget {
   });
 
   String _generateTicketText() {
-    final dateFormat = DateFormat('dd/MM/yyyy hh:mm a');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('HH:mm:ss');
     final buffer = StringBuffer();
-    buffer.writeln('🍔 *TEXAS BURGER* 🍔');
+    buffer.writeln('🍔 *${venta.companyName}* 🍔');
     buffer.writeln('Ticket #${venta.ticketNumber}');
+    buffer.writeln('Sucursal: ${venta.branchName}');
+    buffer.writeln('Atendido por: ${venta.employeeName}');
     buffer.writeln('Fecha: ${dateFormat.format(venta.timestamp)}');
+    buffer.writeln('Hora: ${timeFormat.format(venta.timestamp)}');
     buffer.writeln('Modalidad: ${venta.orderTypeBadge}');
     if (venta.deliveryAddress != null && venta.deliveryAddress!.isNotEmpty) {
       buffer.writeln('Dirección: ${venta.deliveryAddress}');
@@ -48,7 +52,8 @@ class TicketDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy hh:mm a');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('HH:mm:ss');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -79,6 +84,10 @@ class TicketDialog extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
+                venta.companyName,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.navyBlue),
+              ),
+              Text(
                 'Ticket #${venta.ticketNumber}',
                 style: const TextStyle(
                   fontSize: 16,
@@ -87,7 +96,21 @@ class TicketDialog extends StatelessWidget {
                 ),
               ),
               Text(
-                dateFormat.format(venta.timestamp),
+                'Sucursal: ${venta.branchName}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Atendido por: ${venta.employeeName}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Fecha: ${dateFormat.format(venta.timestamp)}',
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              Text(
+                'Hora: ${timeFormat.format(venta.timestamp)}',
                 style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 10),

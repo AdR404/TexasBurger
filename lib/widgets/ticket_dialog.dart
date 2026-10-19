@@ -68,10 +68,10 @@ class TicketDialog extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: const BoxDecoration(
-                  color: AppTheme.lightRed,
+                  color: AppTheme.successSoft,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: AppTheme.primaryRed, size: 36),
+                child: const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 36),
               ),
               const SizedBox(height: 10),
               const Text(
@@ -92,7 +92,7 @@ class TicketDialog extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryRed,
+                  color: AppTheme.primary,
                 ),
               ),
               Text(
@@ -169,7 +169,7 @@ class TicketDialog extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 20, top: 2),
                         child: Text(
                           item.customizationSummary,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.primaryRed, fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontSize: 11, color: AppTheme.infoBlue, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ],
@@ -191,8 +191,8 @@ class TicketDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
-                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600)),
+                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -207,7 +207,7 @@ class TicketDialog extends StatelessWidget {
                   ),
                   Text(
                     '\$${venta.total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primaryRed),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primary),
                   ),
                 ],
               ),
@@ -254,7 +254,7 @@ class TicketDialog extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text('Aceptar', style: TextStyle(fontSize: 13)),

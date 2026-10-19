@@ -128,7 +128,7 @@ class SaleHistoryList extends StatelessWidget {
                         ),
                         Text(
                           venta.orderTypeBadge,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primaryRed),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -149,7 +149,7 @@ class SaleHistoryList extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primary,
                         ),
                       ),
                       Text(
@@ -169,14 +169,14 @@ class SaleHistoryList extends StatelessWidget {
 
   Color _getMethodColor(String method) {
     if (method.toLowerCase().contains('efectivo')) return AppTheme.navyBlue;
-    if (method.toLowerCase().contains('transfer')) return const Color(0xFF7A4B00);
+    if (method.toLowerCase().contains('transfer')) return AppTheme.goldDark;
     if (method.toLowerCase().contains('tarjeta')) return AppTheme.infoBlue;
     return AppTheme.gold;
   }
 
   Color _getMethodBg(String method) {
-    if (method.toLowerCase().contains('efectivo')) return const Color(0xFFDDEFFB);
-    if (method.toLowerCase().contains('transfer')) return const Color(0xFFFFF1B8);
+    if (method.toLowerCase().contains('efectivo')) return AppTheme.infoSoft;
+    if (method.toLowerCase().contains('transfer')) return AppTheme.goldSoft;
     return _getMethodColor(method).withValues(alpha: 0.12);
   }
 }

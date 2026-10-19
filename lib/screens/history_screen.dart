@@ -102,7 +102,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     IconButton(
                       icon: Icon(
                         _selectedDate == null ? Icons.calendar_today_outlined : Icons.calendar_month,
-                        color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.primaryRed,
+                        color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.infoBlue,
                       ),
                       tooltip: 'Filtrar por fecha',
                       visualDensity: VisualDensity.compact,
@@ -125,7 +125,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         onPressed: () => setState(() => _selectedDate = null),
                       ),
                     IconButton(
-                      icon: const Icon(Icons.file_download_outlined, color: AppTheme.primaryRed),
+                      icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                       tooltip: 'Exportar a CSV o WhatsApp',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _showExportDialog(filteredSales),
@@ -145,7 +145,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     Text(
                       'Total: \$${totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppTheme.primaryRed, fontSize: 16, fontWeight: FontWeight.w900),
+                      style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),

@@ -97,7 +97,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.shopping_bag_outlined, color: AppTheme.primaryRed),
+                    const Icon(Icons.shopping_bag_outlined, color: AppTheme.primary),
                     const SizedBox(width: 8),
                     Text(
                       'Orden (${widget.cartItems.fold<int>(0, (sum, i) => sum + i.quantity)})',
@@ -111,7 +111,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                 ),
                 TextButton(
                   onPressed: widget.onClear,
-                  child: const Text('Vaciar', style: TextStyle(color: Colors.red)),
+                  child: const Text('Vaciar', style: TextStyle(color: AppTheme.danger)),
                 ),
               ],
             ),
@@ -270,7 +270,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                             const SizedBox(height: 2),
                             Text(
                               item.customizationSummary,
-                              style: const TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: AppTheme.infoBlue, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],
                           Text(
@@ -283,13 +283,9 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        InkWell(
-                          onTap: () => widget.onDecrement(item.product.id),
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Padding(
-                            padding: EdgeInsets.all(6),
-                            child: Icon(Icons.remove_circle_outline, color: AppTheme.primaryRed, size: 22),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline, color: AppTheme.primary, size: 20),
+                          onPressed: () => widget.onDecrement(item.product.id),
                         ),
                         SizedBox(
                           width: 24,
@@ -299,13 +295,9 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                         ),
-                        InkWell(
-                          onTap: () => widget.onIncrement(item.product.id),
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Padding(
-                            padding: EdgeInsets.all(6),
-                            child: Icon(Icons.add_circle_outline, color: AppTheme.primaryRed, size: 22),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 20),
+                          onPressed: () => widget.onIncrement(item.product.id),
                         ),
                       ],
                     ),
@@ -339,8 +331,8 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(calc.discountReason ?? 'Descuento aplicado:', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
-                  Text('-\$${calc.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                  Text(calc.discountReason ?? 'Descuento aplicado:', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600)),
+                  Text('-\$${calc.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -355,7 +347,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                 ),
                 Text(
                   '\$${calc.total.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.primaryRed),
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.primary),
                 ),
               ],
             ),
@@ -385,7 +377,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryRed,
+                  backgroundColor: AppTheme.primary,
                   elevation: 3,
                 ),
               ),

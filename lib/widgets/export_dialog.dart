@@ -32,10 +32,10 @@ class ExportDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.lightRed,
+                    color: AppTheme.primarySoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.file_download_outlined, color: AppTheme.primaryRed),
+                  child: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

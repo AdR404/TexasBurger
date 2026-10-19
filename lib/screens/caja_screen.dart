@@ -51,7 +51,7 @@ class _CajaScreenState extends State<CajaScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
-              Icon(Icons.point_of_sale, color: AppTheme.primaryRed),
+              Icon(Icons.point_of_sale, color: AppTheme.primary),
               SizedBox(width: 8),
               Text('Apertura de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
@@ -84,7 +84,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 spacing: 8,
                 children: presets.map((val) => ActionChip(
                   label: Text('\$$val'),
-                  backgroundColor: controller.text == '$val' ? AppTheme.lightRed : AppTheme.creamBg,
+                  backgroundColor: controller.text == '$val' ? AppTheme.primarySoft : AppTheme.creamBg,
                   onPressed: () {
                     setDialogState(() {
                       controller.text = '$val';
@@ -125,7 +125,7 @@ class _CajaScreenState extends State<CajaScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(isGasto ? Icons.remove_circle : Icons.add_circle, color: isGasto ? Colors.red : AppTheme.successGreen),
+            Icon(isGasto ? Icons.remove_circle : Icons.add_circle, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -168,7 +168,7 @@ class _CajaScreenState extends State<CajaScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isGasto ? Colors.red : AppTheme.successGreen,
+              backgroundColor: isGasto ? AppTheme.danger : AppTheme.successGreen,
             ),
             onPressed: () async {
               final amount = double.tryParse(amountController.text) ?? 0.0;
@@ -202,7 +202,7 @@ class _CajaScreenState extends State<CajaScreen> {
             diffColor = Colors.blue.shade700;
             diffText = 'Sobrante: +\$${diff.toStringAsFixed(2)}';
           } else if (diff < 0) {
-            diffColor = Colors.red;
+            diffColor = AppTheme.danger;
             diffText = 'Faltante: -\$${diff.abs().toStringAsFixed(2)}';
           }
 
@@ -210,7 +210,7 @@ class _CajaScreenState extends State<CajaScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Row(
               children: [
-                Icon(Icons.inventory_rounded, color: AppTheme.primaryRed),
+                Icon(Icons.inventory_rounded, color: AppTheme.primary),
                 SizedBox(width: 8),
                 Text('Arqueo y Corte de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ],
@@ -282,7 +282,7 @@ class _CajaScreenState extends State<CajaScreen> {
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryRed),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
                 onPressed: () async {
                   final closedCorte = await _cajaService.cerrarCaja(
                     actualCashCounted: counted,
@@ -359,7 +359,7 @@ class _CajaScreenState extends State<CajaScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-              color: isNegative ? Colors.red : (isBold ? AppTheme.navyBlue : AppTheme.textDark),
+              color: isNegative ? AppTheme.danger : (isBold ? AppTheme.navyBlue : AppTheme.textDark),
             ),
           ),
         ],
@@ -419,7 +419,7 @@ class _CajaScreenState extends State<CajaScreen> {
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: const Text('Abrir Caja / Iniciar Turno'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       ),
                       onPressed: _showAbrirCajaDialog,
@@ -433,7 +433,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppTheme.navyBlue, Color(0xFF1E3A5F)],
+                    colors: [AppTheme.navyBlue, AppTheme.navyBlueLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -544,10 +544,10 @@ class _CajaScreenState extends State<CajaScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                      label: const Text('Registrar Gasto', style: TextStyle(color: Colors.red)),
+                      icon: const Icon(Icons.remove_circle_outline, color: AppTheme.danger),
+                      label: const Text('Registrar Gasto', style: TextStyle(color: AppTheme.danger)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
+                        side: const BorderSide(color: AppTheme.danger),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: () => _showMovimientoDialog(type: 'salida'),
@@ -574,7 +574,7 @@ class _CajaScreenState extends State<CajaScreen> {
                   icon: const Icon(Icons.inventory_2_outlined),
                   label: const Text('Hacer Corte de Caja (Cerrar Turno)'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryRed,
+                    backgroundColor: AppTheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () => _showCierreCajaDialog(live),
@@ -598,12 +598,12 @@ class _CajaScreenState extends State<CajaScreen> {
                       final isGasto = m.type == 'salida';
                       return ListTile(
                         dense: true,
-                        leading: Icon(isGasto ? Icons.arrow_downward : Icons.arrow_upward, color: isGasto ? Colors.red : AppTheme.successGreen),
+                        leading: Icon(isGasto ? Icons.arrow_downward : Icons.arrow_upward, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
                         title: Text(m.concept, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text(DateFormat('hh:mm a').format(m.timestamp), style: const TextStyle(fontSize: 11)),
                         trailing: Text(
                           '${isGasto ? '-' : '+'}\$${m.amount.toStringAsFixed(2)}',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isGasto ? Colors.red : AppTheme.successGreen),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isGasto ? AppTheme.danger : AppTheme.successGreen),
                         ),
                       );
                     },
@@ -650,7 +650,7 @@ class _CajaScreenState extends State<CajaScreen> {
                     diffBadgeColor = Colors.blue;
                     diffLabel = 'Sobrante +\$${diff.toStringAsFixed(2)}';
                   } else if (diff < 0) {
-                    diffBadgeColor = Colors.red;
+                    diffBadgeColor = AppTheme.danger;
                     diffLabel = 'Faltante -\$${diff.abs().toStringAsFixed(2)}';
                   }
 
@@ -684,7 +684,7 @@ class _CajaScreenState extends State<CajaScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('${c.ordersCount} órdenes', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                              Text('Venta Total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryRed)),
+                              Text('Venta Total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary)),
                             ],
                           ),
                           const Divider(height: 16),

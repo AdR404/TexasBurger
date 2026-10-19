@@ -310,12 +310,12 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDDEFFB),
+                                  color: AppTheme.infoSoft,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
                                   icon,
-                                  color: product.isPromo ? AppTheme.primaryRed : AppTheme.navyBlue,
+                                  color: product.isPromo ? AppTheme.promo : AppTheme.navyBlue,
                                   size: 26,
                                 ),
                               ),
@@ -392,7 +392,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                 ElevatedButton(
                                   onPressed: () => _addToCart(product),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryRed,
+                                    backgroundColor: AppTheme.primary,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
                                     padding: EdgeInsets.zero,
@@ -407,7 +407,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Material(
-                                      color: const Color(0xFFDDEFFB),
+                                      color: AppTheme.infoSoft,
                                       borderRadius: BorderRadius.circular(10),
                                       child: InkWell(
                                         onTap: () => _decrementCart(product.id),
@@ -430,7 +430,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                       ),
                                     ),
                                     Material(
-                                      color: AppTheme.primaryRed,
+                                      color: AppTheme.primary,
                                       borderRadius: BorderRadius.circular(10),
                                       child: InkWell(
                                         onTap: () => _incrementCart(product.id),
@@ -471,7 +471,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -501,7 +501,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                       icon: const Icon(Icons.arrow_forward, size: 18),
                       label: const Text('Ver Orden'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryRed,
+                        backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

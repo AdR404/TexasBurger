@@ -4,19 +4,19 @@ import '../models/producto_extra.dart';
 class BootstrapService {
   static List<ProductoExtra> getBurgerExtras() {
     return const [
-      ProductoExtra(id: 'ext_queso', name: 'Queso Amarillo Extra', price: 12.0),
-      ProductoExtra(id: 'ext_tocino', name: 'Tocino Crujiente Extra', price: 18.0),
-      ProductoExtra(id: 'ext_carne', name: 'Carne de Res Extra', price: 32.0),
-      ProductoExtra(id: 'ext_aguacate', name: 'Aguacate Extra', price: 15.0),
-      ProductoExtra(id: 'ext_aderezo', name: 'Aderezo Ranch / Salsa Especial', price: 10.0),
+      ProductoExtra(id: 'ext_queso', name: 'Queso amarillo extra', price: 12.0),
+      ProductoExtra(id: 'ext_tocino', name: 'Tocino crujiente extra', price: 18.0),
+      ProductoExtra(id: 'ext_carne', name: 'Carne de res extra', price: 32.0),
+      ProductoExtra(id: 'ext_aguacate', name: 'Aguacate extra', price: 15.0),
+      ProductoExtra(id: 'ext_aderezo', name: 'Aderezo ranch / salsa especial', price: 10.0),
     ];
   }
 
   static List<ProductoExtra> getFriesExtras() {
     return const [
-      ProductoExtra(id: 'ext_cheddar_bacon', name: 'Queso Cheddar Fundido + Tocino', price: 25.0),
-      ProductoExtra(id: 'ext_buffalo', name: 'Bañadas en Salsa Buffalo', price: 15.0),
-      ProductoExtra(id: 'ext_ranch_dip', name: 'Dip Aderezo Ranch', price: 10.0),
+      ProductoExtra(id: 'ext_cheddar_bacon', name: 'Queso cheddar fundido + tocino', price: 25.0),
+      ProductoExtra(id: 'ext_buffalo', name: 'Bañadas en salsa Buffalo', price: 15.0),
+      ProductoExtra(id: 'ext_ranch_dip', name: 'Dip de aderezo ranch', price: 10.0),
     ];
   }
 
@@ -28,7 +28,7 @@ class BootstrapService {
       // PROMOCIONES
       Producto(
         id: 'promo_martes',
-        name: 'Martes 2 Hamburguesas Clásicas Texas',
+        name: 'Martes: 2 hamburguesas clásicas Texas',
         description: 'El día martes te llevas 2 hamburguesas texanas clásicas en promoción.',
         price: 150.0,
         category: 'Promociones',
@@ -38,8 +38,8 @@ class BootstrapService {
       ),
       Producto(
         id: 'combo_pollo_especial',
-        name: 'Hamburguesa de Pollo Especial Combo',
-        description: 'Hamburguesa de pollo + papas a la francesa medianas + refresco 600ml.',
+        name: 'Combo de hamburguesa de pollo',
+        description: 'Hamburguesa de pollo + papas a la francesa medianas + refresco de 600 ml.',
         price: 139.0,
         category: 'Promociones',
         isPromo: true,
@@ -50,7 +50,7 @@ class BootstrapService {
       // HAMBURGUESAS
       Producto(
         id: 'hamb_pollo_clasica',
-        name: 'Hamburguesa de Pollo Clásica',
+        name: 'Hamburguesa de pollo clásica',
         description: 'Hamburguesa de pollo, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 94.0,
         category: 'Hamburguesas',
@@ -58,7 +58,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_texana_clasica',
-        name: 'Hamburguesa Texana Clásica',
+        name: 'Hamburguesa texana clásica',
         description: 'Hamburguesa de res, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 96.0,
         category: 'Hamburguesas',
@@ -66,7 +66,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_super_texana',
-        name: 'Hamburguesa Super Texana',
+        name: 'Hamburguesa súper texana',
         description: 'Hamburguesa de res, tocino, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 106.0,
         category: 'Hamburguesas',
@@ -74,7 +74,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_super_texana_bbq',
-        name: 'Hamburguesa Super Texana BBQ',
+        name: 'Hamburguesa súper texana BBQ',
         description: 'Hamburguesa de res, salsa BBQ, tocino, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga.',
         price: 106.0,
         category: 'Hamburguesas',
@@ -82,7 +82,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_doble',
-        name: 'Hamburguesa Doble',
+        name: 'Hamburguesa doble',
         description: 'Hamburguesa de res, 2 carnes, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 114.0,
         category: 'Hamburguesas',
@@ -90,7 +90,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_super_doble',
-        name: 'Hamburguesa Super Doble',
+        name: 'Hamburguesa súper doble',
         description: 'Hamburguesa de res, 2 carnes, tocino, jamón, salami, queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 124.0,
         category: 'Hamburguesas',
@@ -98,7 +98,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'hamb_walter_especial',
-        name: 'Hamburguesa Walter Especial',
+        name: 'Hamburguesa Walter especial',
         description: 'Hamburguesa de res, 3 carnes, tocino, 2 jamón, 2 salami, 2 queso amarillo, aguacate, pepinillos, cebolla, tomate, lechuga, aderezos.',
         price: 149.0,
         category: 'Hamburguesas',
@@ -116,7 +116,7 @@ class BootstrapService {
       // COMPLEMENTOS
       Producto(
         id: 'comp_papas_francesa',
-        name: 'Papas a la Francesa',
+        name: 'Papas a la francesa',
         description: 'Papas fritas corte clásico, crujientes con sal y sazonador de la casa.',
         price: 45.0,
         category: 'Complementos',
@@ -124,7 +124,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'comp_papas_crisscut',
-        name: 'Papas Crisscut (Rejilla)',
+        name: 'Papas Crisscut (rejilla)',
         description: 'Papas sazonadas en corte rejilla tipo waffle, súper doradas.',
         price: 55.0,
         category: 'Complementos',
@@ -132,7 +132,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'comp_papas_especiales',
-        name: 'Papas Especiales Texas',
+        name: 'Papas especiales Texas',
         description: 'Orden grande de papas francesas bañadas en queso cheddar fundido y trocitos de tocino.',
         price: 75.0,
         category: 'Complementos',
@@ -140,14 +140,14 @@ class BootstrapService {
       ),
       Producto(
         id: 'comp_aros_cebolla',
-        name: 'Aros de Cebolla (8 pzas)',
+        name: 'Aros de cebolla (8 pzas)',
         description: 'Aros de cebolla rebosados y dorados al punto, acompañados con aderezo ranch.',
         price: 50.0,
         category: 'Complementos',
       ),
       Producto(
         id: 'comp_boneless',
-        name: 'Orden de Boneless',
+        name: 'Orden de boneless',
         description: 'Trocitos de pechuga de pollo empanizados y bañados en salsa Buffalo o BBQ con aderezo.',
         price: 85.0,
         category: 'Complementos',
@@ -157,20 +157,20 @@ class BootstrapService {
       Producto(
         id: 'beb_refresco_600',
         name: 'Refresco 600 ml',
-        description: 'Coca-Cola regular, Coca-Cola Sin Azúcar, Joya Manzana, Sprite o Fresca.',
+        description: 'Coca-Cola regular, Coca-Cola sin azúcar, Joya Manzana, Sprite o Fresca.',
         price: 28.0,
         category: 'Bebidas',
       ),
       Producto(
         id: 'beb_refresco_lata',
-        name: 'Refresco en Lata 355 ml',
+        name: 'Refresco en lata 355 ml',
         description: 'Lata fría surtida (Coca-Cola, Sprite, Mundet).',
         price: 22.0,
         category: 'Bebidas',
       ),
       Producto(
         id: 'beb_agua_natural',
-        name: 'Agua Purificada 600 ml',
+        name: 'Agua purificada 600 ml',
         description: 'Botella de agua purificada fresca.',
         price: 18.0,
         category: 'Bebidas',

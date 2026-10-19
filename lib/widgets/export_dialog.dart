@@ -11,7 +11,7 @@ class ExportDialog extends StatelessWidget {
   const ExportDialog({
     super.key,
     required this.sales,
-    this.title = 'Ventas Actuales',
+    this.title = 'Ventas actuales',
   });
 
   @override
@@ -43,7 +43,7 @@ class ExportDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Exportar Reporte',
+                        'Exportar reporte',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
                       ),
                       Text(
@@ -117,7 +117,7 @@ class ExportDialog extends StatelessWidget {
                           SnackBar(
                             content: Text(
                               path != null
-                                  ? '¡Archivo CSV guardado en el Escritorio!\n$path'
+                                  ? '¡Archivo CSV guardado en el escritorio!\n$path'
                                   : 'No se pudo guardar el archivo.',
                             ),
                             duration: const Duration(seconds: 4),

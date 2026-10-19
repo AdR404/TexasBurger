@@ -53,7 +53,7 @@ class _CajaScreenState extends State<CajaScreen> {
             children: [
               Icon(Icons.point_of_sale, color: AppTheme.primary),
               SizedBox(width: 8),
-              Text('Apertura de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text('Apertura de caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           content: SingleChildScrollView(child: Column(
@@ -129,7 +129,7 @@ class _CajaScreenState extends State<CajaScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isGasto ? 'Registrar Gasto / Salida' : 'Registrar Entrada de Efectivo',
+                isGasto ? 'Registrar gasto / salida' : 'Registrar entrada de efectivo',
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
             ),
@@ -197,7 +197,7 @@ class _CajaScreenState extends State<CajaScreen> {
           final diff = counted - live.expectedCash;
 
           Color diffColor = AppTheme.successGreen;
-          String diffText = 'Caja Cuadrada (Exacto)';
+          String diffText = 'Caja cuadrada (exacto)';
           if (diff > 0) {
             diffColor = Colors.blue.shade700;
             diffText = 'Sobrante: +\$${diff.toStringAsFixed(2)}';
@@ -212,7 +212,7 @@ class _CajaScreenState extends State<CajaScreen> {
               children: [
                 Icon(Icons.inventory_rounded, color: AppTheme.primary),
                 SizedBox(width: 8),
-                Text('Arqueo y Corte de Caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text('Arqueo y corte de caja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             ),
             content: SingleChildScrollView(
@@ -310,7 +310,7 @@ class _CajaScreenState extends State<CajaScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('¡Corte de Caja Finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('¡Corte de caja finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +407,7 @@ class _CajaScreenState extends State<CajaScreen> {
                       child: const Icon(Icons.lock_clock, size: 36, color: AppTheme.navyBlue),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Caja Actualmente Cerrada', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                    const Text('Caja actualmente cerrada', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
                     const SizedBox(height: 6),
                     const Text(
                       'Inicia el turno ingresando el fondo de caja en efectivo para registrar ventas, gastos y arqueo.',
@@ -417,7 +417,7 @@ class _CajaScreenState extends State<CajaScreen> {
                     const SizedBox(height: 18),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Abrir Caja / Iniciar Turno'),
+                      label: const Text('Abrir caja / iniciar turno'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -456,7 +456,7 @@ class _CajaScreenState extends State<CajaScreen> {
                               decoration: const BoxDecoration(color: AppTheme.successGreen, shape: BoxShape.circle),
                             ),
                             const SizedBox(width: 8),
-                            const Text('TURNO EN CURSO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5)),
+                            const Text('Turno en curso', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5)),
                           ],
                         ),
                         Text(
@@ -466,7 +466,7 @@ class _CajaScreenState extends State<CajaScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text('Efectivo Esperado en Cajón', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const Text('Efectivo esperado en cajón', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     Text(
                       '\$${live.expectedCash.toStringAsFixed(2)}',
                       style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900),
@@ -545,7 +545,7 @@ class _CajaScreenState extends State<CajaScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.remove_circle_outline, color: AppTheme.danger),
-                      label: const Text('Registrar Gasto', style: TextStyle(color: AppTheme.danger)),
+                      label: const Text('Registrar gasto', style: TextStyle(color: AppTheme.danger)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppTheme.danger),
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -572,7 +572,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text('Hacer Corte de Caja (Cerrar Turno)'),
+                  label: const Text('Hacer corte de caja (cerrar turno)'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -584,7 +584,7 @@ class _CajaScreenState extends State<CajaScreen> {
               // Shift Movements List
               if (live.movimientos.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                const Text('Movimientos del Turno', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
+                const Text('Movimientos del turno', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
                 const SizedBox(height: 8),
                 Card(
                   margin: EdgeInsets.zero,
@@ -617,7 +617,7 @@ class _CajaScreenState extends State<CajaScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Historial de Cortes Anteriores', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
+                const Text('Historial de cortes anteriores', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
                 Text('${history.length} cortes', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),

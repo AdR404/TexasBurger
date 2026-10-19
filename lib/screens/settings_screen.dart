@@ -47,7 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          'Modificar Precio: ${p.name}',
+          'Modificar precio: ${p.name}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -104,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                isPromo ? 'Nueva Promoción' : 'Nuevo Producto',
+                isPromo ? 'Nueva promoción' : 'Nuevo producto',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ],
@@ -304,8 +304,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           isAdmin
-                              ? 'Modo Administrador Activo'
-                              : 'Modo Usuario (Solo Lectura del Menú)',
+                              ? 'Modo administrador activo'
+                              : 'Modo usuario (solo lectura del menú)',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -391,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'EST. 1995 • Sistema Punto de Venta',
+                          'Est. 1995 • Sistema punto de venta',
                           style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
@@ -409,8 +409,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: Text(
                     isAdmin
-                        ? 'Administración del Menú y Precios'
-                        : 'Catálogo del Menú (Precios Vigentes)',
+                        ? 'Administración del menú y precios'
+                        : 'Catálogo del menú (precios vigentes)',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -423,7 +423,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: _showAddProductOrPromoDialog,
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text(
-                      'Añadir Item / Promo',
+                      'Añadir artículo / promo',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     style: FilledButton.styleFrom(
@@ -545,7 +545,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Opciones y Datos: Solo visibles para Admin
             if (isAdmin) ...[
               const Text(
-                'Opciones y Datos (Solo Administrador)',
+                'Opciones y datos (solo administrador)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -562,14 +562,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
-                        title: const Text('Cargar Ventas de Demostración'),
-                        subtitle: const Text('Genera ventas de ejemplo para visualizar el Dashboard'),
+                        title: const Text('Cargar ventas de demostración'),
+                        subtitle: const Text('Genera ventas de ejemplo para visualizar el panel'),
                         trailing: ElevatedButton(
                           onPressed: () async {
                             final scaffold = ScaffoldMessenger.of(context);
                             await _salesService.loadSampleSales(_productService.products);
                             scaffold.showSnackBar(
-                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el Dashboard.')),
+                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el panel.')),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -583,7 +583,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.refresh_rounded, color: AppTheme.infoBlue),
-                        title: const Text('Restablecer Menú Original'),
+                        title: const Text('Restablecer menú original'),
                         subtitle: const Text('Restaura los 10 productos y precios iniciales'),
                         trailing: OutlinedButton(
                           onPressed: () async {
@@ -600,7 +600,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.delete_outline, color: AppTheme.danger),
-                        title: const Text('Limpiar Historial de Ventas'),
+                        title: const Text('Limpiar historial de ventas'),
                         subtitle: const Text('Elimina todas las ventas guardadas localmente'),
                         trailing: OutlinedButton(
                           style: OutlinedButton.styleFrom(

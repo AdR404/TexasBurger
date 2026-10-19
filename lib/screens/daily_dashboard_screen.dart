@@ -69,7 +69,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
-                  tooltip: 'Exportar Ventas del Periodo',
+                  tooltip: 'Exportar ventas del periodo',
                   onPressed: () {
                     final pSales = DashboardService.filterSales(sales, _selectedPeriod);
                     showDialog(
@@ -110,7 +110,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Total Vendido',
+                        'Total vendido',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -124,7 +124,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${metrics.totalTickets} Tickets',
+                          '${metrics.totalTickets} tickets',
                           style: const TextStyle(
                             color: AppTheme.navyBlue,
                             fontSize: 12,
@@ -149,8 +149,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _buildHeroSubmetric('Ticket Promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}')),
-                      Expanded(child: _buildHeroSubmetric('Ticket Más Alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Ticket promedio', '\$${metrics.ticketPromedio.toStringAsFixed(2)}')),
+                      Expanded(child: _buildHeroSubmetric('Ticket más alto', '\$${metrics.ventaMaxima.toStringAsFixed(2)}')),
                       Expanded(child: _buildHeroSubmetric('Hamburguesas', '${metrics.totalHamburguesas} pzas', alignEnd: true)),
                     ],
                   ),
@@ -161,7 +161,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
 
             // Metrics Grid
             const Text(
-              'Métricas Clave',
+              'Métricas clave',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -178,14 +178,14 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               childAspectRatio: 1.45,
               children: [
                 MetricCard(
-                  title: 'Venta Máxima',
+                  title: 'Venta máxima',
                   value: '\$${metrics.ventaMaxima.toStringAsFixed(2)}',
                   subtitle: 'Ticket récord del periodo',
                   icon: Icons.emoji_events_rounded,
                   accentColor: AppTheme.gold,
                 ),
                 MetricCard(
-                  title: 'Primera Venta',
+                  title: 'Primera venta',
                   value: '\$${metrics.primeraVenta.toStringAsFixed(2)}',
                   subtitle: 'Apertura de turno',
                   icon: Icons.wb_sunny_rounded,
@@ -211,7 +211,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
 
             // Payment Methods Breakdown
             const Text(
-              'Desglose por Método de Pago',
+              'Desglose por método de pago',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

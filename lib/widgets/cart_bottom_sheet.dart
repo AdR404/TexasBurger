@@ -119,7 +119,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
 
             // Modalidad de Pedido
             const Text(
-              'Modalidad de Pedido:',
+              'Modalidad de pedido:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.navyBlue),
             ),
             const SizedBox(height: 6),
@@ -129,7 +129,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                 children: [
                   ChoiceChip(
                     avatar: const Icon(Icons.restaurant, size: 16),
-                    label: const Text('Comer Aquí'),
+                    label: const Text('Comer aquí'),
                     selected: _orderType == 'Comer aquí',
                     selectedColor: AppTheme.navyBlue,
                     labelStyle: TextStyle(
@@ -142,7 +142,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                   const SizedBox(width: 8),
                   ChoiceChip(
                     avatar: const Icon(Icons.shopping_bag, size: 16),
-                    label: const Text('Para Llevar'),
+                    label: const Text('Para llevar'),
                     selected: _orderType == 'Para llevar',
                     selectedColor: AppTheme.navyBlue,
                     labelStyle: TextStyle(
@@ -155,7 +155,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                   const SizedBox(width: 8),
                   ChoiceChip(
                     avatar: const Icon(Icons.delivery_dining, size: 16),
-                    label: const Text('A Domicilio'),
+                    label: const Text('A domicilio'),
                     selected: _orderType == 'A domicilio',
                     selectedColor: AppTheme.navyBlue,
                     labelStyle: TextStyle(
@@ -175,7 +175,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               TextField(
                 controller: _tableController,
                 decoration: InputDecoration(
-                  labelText: 'Número o Nombre de Mesa',
+                  labelText: 'Número o nombre de mesa',
                   prefixIcon: const Icon(Icons.table_restaurant_outlined, size: 20),
                   filled: true,
                   fillColor: AppTheme.creamBg,
@@ -187,7 +187,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Nombre del Cliente',
+                  labelText: 'Nombre del cliente',
                   prefixIcon: const Icon(Icons.person_outline, size: 20),
                   filled: true,
                   fillColor: AppTheme.creamBg,
@@ -199,7 +199,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Nombre del Cliente',
+                  labelText: 'Nombre del cliente',
                   prefixIcon: const Icon(Icons.person_outline, size: 20),
                   filled: true,
                   fillColor: AppTheme.creamBg,

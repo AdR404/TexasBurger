@@ -91,7 +91,7 @@ class SaleChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ventas por Hora (\$)',
+                'Ventas por hora (\$)',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,

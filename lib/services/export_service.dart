@@ -90,10 +90,10 @@ class ExportService {
     buffer.writeln('🏁 *Cierre:* $closedStr');
     buffer.writeln('🧾 *Órdenes cobradas:* ${corte.ordersCount}');
     buffer.writeln('----------------------------------');
-    buffer.writeln('💼 *Fondo Inicial:* \$${corte.initialCash.toStringAsFixed(2)}');
-    buffer.writeln('➕ *Ventas en Efectivo:* \$${corte.cashSales.toStringAsFixed(2)}');
+    buffer.writeln('💼 *Fondo inicial:* \$${corte.initialCash.toStringAsFixed(2)}');
+    buffer.writeln('➕ *Ventas en efectivo:* \$${corte.cashSales.toStringAsFixed(2)}');
     if (corte.cashIn > 0) {
-      buffer.writeln('➕ *Entradas a Caja:* \$${corte.cashIn.toStringAsFixed(2)}');
+      buffer.writeln('➕ *Entradas a caja:* \$${corte.cashIn.toStringAsFixed(2)}');
     }
     if (corte.cashOut > 0) {
       buffer.writeln('➖ *Gastos/Salidas:* \$${corte.cashOut.toStringAsFixed(2)}');
@@ -105,7 +105,7 @@ class ExportService {
       buffer.writeln('💵 *EFECTIVO CONTADO:* \$${corte.actualCashCounted!.toStringAsFixed(2)}');
       final diff = corte.difference ?? 0.0;
       if (diff == 0) {
-        buffer.writeln('✅ *DIFERENCIA:* \$0.00 (Caja Cuadrada)');
+        buffer.writeln('✅ *Diferencia:* \$0.00 (caja cuadrada)');
       } else if (diff > 0) {
         buffer.writeln('🟢 *SOBRANTE:* +\$${diff.toStringAsFixed(2)}');
       } else {
@@ -120,7 +120,7 @@ class ExportService {
 
     if (corte.movimientos.isNotEmpty) {
       buffer.writeln('----------------------------------');
-      buffer.writeln('📋 *Movimientos de Caja:*');
+      buffer.writeln('📋 *Movimientos de caja:*');
       for (final m in corte.movimientos) {
         final symbol = m.type == 'entrada' ? '➕' : '➖';
         buffer.writeln('$symbol \$${m.amount.toStringAsFixed(2)} - ${m.concept}');

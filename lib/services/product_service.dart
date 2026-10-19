@@ -39,10 +39,20 @@ class ProductService extends ChangeNotifier {
           if (index == -1) {
             _products.add(def);
             addedNew = true;
-          } else if (_products[index].availableExtras.isEmpty && def.availableExtras.isNotEmpty) {
-            // Update available extras if previously empty
-            _products[index] = _products[index].copyWith(availableExtras: def.availableExtras);
-            addedNew = true;
+          } else {
+            final currentProduct = _products[index];
+            var updatedProduct = currentProduct;
+            if (updatedProduct.availableExtras.isEmpty && def.availableExtras.isNotEmpty) {
+              updatedProduct = updatedProduct.copyWith(availableExtras: def.availableExtras);
+            }
+            if (updatedProduct.name != def.name &&
+                updatedProduct.name.toLowerCase() == def.name.toLowerCase()) {
+              updatedProduct = updatedProduct.copyWith(name: def.name);
+            }
+            if (!identical(updatedProduct, currentProduct)) {
+              _products[index] = updatedProduct;
+              addedNew = true;
+            }
           }
         }
         if (addedNew) {

@@ -120,7 +120,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                           Icon(Icons.add_circle_outline, size: 18, color: AppTheme.navyBlue),
                           SizedBox(width: 6),
                           Text(
-                            'Ingredientes Extras (Opcional):',
+                            'Ingredientes extras (opcional):',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.navyBlue),
                           ),
                         ],
@@ -156,7 +156,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                           Icon(Icons.remove_circle_outline, size: 18, color: AppTheme.primary),
                           SizedBox(width: 6),
                           Text(
-                            'Quitar ingredientes / Preparación:',
+                            'Quitar ingredientes / preparación:',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.navyBlue),
                           ),
                         ],

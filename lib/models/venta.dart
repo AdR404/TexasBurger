@@ -52,17 +52,17 @@ class Venta {
     switch (orderType) {
       case 'Para llevar':
         return customerName != null && customerName!.isNotEmpty
-            ? '🛍️ Para Llevar • $customerName'
-            : '🛍️ Para Llevar';
+            ? '🛍️ Para llevar • $customerName'
+            : '🛍️ Para llevar';
       case 'A domicilio':
         return customerName != null && customerName!.isNotEmpty
             ? '🛵 Domicilio • $customerName'
-            : '🛵 A Domicilio';
+            : '🛵 A domicilio';
       case 'Comer aquí':
       default:
         return tableNumber != null && tableNumber!.isNotEmpty
-            ? '🍽️ Comer Aquí • $tableNumber'
-            : '🍽️ Comer Aquí';
+            ? '🍽️ Comer aquí • $tableNumber'
+            : '🍽️ Comer aquí';
     }
   }
 

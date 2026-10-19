@@ -72,7 +72,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             content: Text('${customItem.quantity}x ${product.name} personalizado agregado a la orden.'),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
-              label: 'Ver Orden',
+              label: 'Ver orden',
               textColor: AppTheme.gold,
               onPressed: _openCartBottomSheet,
             ),
@@ -486,7 +486,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Total de la Orden',
+                            'Total de la orden',
                             style: TextStyle(color: Colors.white70, fontSize: 12),
                           ),
                           Text(

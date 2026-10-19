@@ -45,13 +45,13 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   List<String> get _subtitles => [
-    'Punto de Venta / Venta Rápida',
-    'Métricas Diarias y Rendimiento',
-    'Historial de Tickets y Órdenes',
-    'Arqueo de Turno y Control de Efectivo',
+    'Punto de venta / venta rápida',
+    'Métricas diarias y rendimiento',
+    'Historial de tickets y órdenes',
+    'Arqueo de turno y control de efectivo',
     _roleService.isAdmin
-        ? 'Configuración y Administración del Menú'
-        : 'Catálogo del Menú (Modo Consulta)',
+        ? 'Configuración y administración del menú'
+        : 'Catálogo del menú (modo consulta)',
   ];
 
   @override

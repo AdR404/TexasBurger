@@ -72,7 +72,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Método de Pago',
+          'Método de pago',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,

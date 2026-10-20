@@ -31,17 +31,17 @@ class TicketDialog extends StatelessWidget {
     }
     buffer.writeln('---------------------------');
     for (final item in venta.items) {
-      buffer.writeln('${item.quantity}x ${item.product.name} - \$${item.subtotal.toStringAsFixed(2)}');
+      buffer.writeln('${item.quantity}x ${item.product.displayName} - \$${item.subtotal.toStringAsFixed(2)}');
       if (item.customizationSummary.isNotEmpty) {
         buffer.writeln('   ↳ ${item.customizationSummary}');
       }
     }
     buffer.writeln('---------------------------');
+    buffer.writeln('Subtotal: \$${venta.subtotal.toStringAsFixed(2)}');
     if (venta.discount > 0) {
-      buffer.writeln('Subtotal: \$${venta.subtotal.toStringAsFixed(2)}');
       buffer.writeln('Descuento: -\$${venta.discount.toStringAsFixed(2)}');
     }
-    buffer.writeln('TOTAL: \$${venta.total.toStringAsFixed(2)}');
+    buffer.writeln('Total: \$${venta.total.toStringAsFixed(2)}');
     buffer.writeln('Método: ${venta.paymentMethod}');
     if (venta.paymentMethod == 'Efectivo' && venta.changeReturned > 0) {
       buffer.writeln('Cambio devuelto: \$${venta.changeReturned.toStringAsFixed(2)}');
@@ -154,7 +154,7 @@ class TicketDialog extends StatelessWidget {
                         ),
                         Expanded(
                           child: Text(
-                            item.product.name,
+                            item.product.displayName,
                             style: const TextStyle(fontSize: 13, color: AppTheme.textDark, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -179,15 +179,15 @@ class TicketDialog extends StatelessWidget {
 
               const Divider(height: 22),
 
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Subtotal:', style: TextStyle(color: AppTheme.textMuted)),
+                  Text('\$${venta.subtotal.toStringAsFixed(2)}'),
+                ],
+              ),
+              const SizedBox(height: 4),
               if (venta.discount > 0) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Subtotal:', style: TextStyle(color: AppTheme.textMuted)),
-                    Text('\$${venta.subtotal.toStringAsFixed(2)}'),
-                  ],
-                ),
-                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -202,7 +202,7 @@ class TicketDialog extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'TOTAL:',
+                    'Total:',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
                   ),
                   Text(

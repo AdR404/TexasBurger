@@ -5,6 +5,9 @@ import '../theme/app_theme.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/sale_chart.dart';
 import '../widgets/export_dialog.dart';
+import '../models/producto.dart';
+import '../widgets/admin_access.dart';
+import '../services/user_role_service.dart';
 
 
 class DailyDashboardScreen extends StatefulWidget {
@@ -35,7 +38,9 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AdminAccess(builder: _buildAdminContent);
+
+  Widget _buildAdminContent(BuildContext context) {
     final sales = _salesService.sales;
     final metrics = DashboardService.computeMetrics(sales, _selectedPeriod);
 
@@ -71,12 +76,13 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                   tooltip: 'Exportar ventas del periodo',
                   onPressed: () {
+                    if (!UserRoleService().isAdmin) return;
                     final pSales = DashboardService.filterSales(sales, _selectedPeriod);
-                    showDialog(
+                    showAdminDialog(
                       context: context,
                       builder: (ctx) => ExportDialog(
                         sales: pSales,
-                        title: 'Periodo ${_selectedPeriod.name.toUpperCase()}',
+                        title: 'Periodo ${_selectedPeriod.name}',
                       ),
                     );
                   },
@@ -175,7 +181,8 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.45,
+              // Keep room for the value and subtitle on narrow phones.
+              mainAxisExtent: 144 * MediaQuery.textScalerOf(context).scale(14) / 14,
               children: [
                 MetricCard(
                   title: 'Venta máxima',
@@ -192,14 +199,14 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   accentColor: AppTheme.infoBlue,
                 ),
                 MetricCard(
-                  title: 'Promedio / Ticket',
+                  title: 'Promedio / ticket',
                   value: '\$${metrics.ticketPromedio.toStringAsFixed(2)}',
                   subtitle: 'Gasto medio por cliente',
                   icon: Icons.trending_up_rounded,
                   accentColor: AppTheme.successGreen,
                 ),
                 MetricCard(
-                  title: 'Burgers / Venta',
+                  title: 'Burgers / venta',
                   value: metrics.promedioHamburguesasPorVenta.toStringAsFixed(1),
                   subtitle: 'Unidades promedio',
                   icon: Icons.lunch_dining_rounded,
@@ -277,7 +284,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              entry.key,
+                              Producto.formatDisplayName(entry.key),
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

@@ -35,13 +35,17 @@ class PromoBadge extends StatelessWidget {
             size: 14,
           ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: isSpecial ? AppTheme.navyBlue : Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.3,
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isSpecial ? AppTheme.navyBlue : Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ],

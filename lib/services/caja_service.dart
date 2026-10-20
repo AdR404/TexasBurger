@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/corte_caja.dart';
 import '../models/venta.dart';
 import '../models/sale_context.dart';
+import 'user_role_service.dart';
 
 class CajaService extends ChangeNotifier {
   static final CajaService _instance = CajaService._internal();
@@ -97,6 +98,7 @@ class CajaService extends ChangeNotifier {
   }
 
   Future<void> abrirCaja(double initialCash, {required SaleContext saleContext}) async {
+    UserRoleService().requireAdmin();
     if (isCajaOpen) throw StateError('Ya hay un turno abierto.');
     _saleContext = saleContext;
     _activeCorte = CorteCaja(
@@ -117,6 +119,7 @@ class CajaService extends ChangeNotifier {
     required double amount,
     required String concept,
   }) async {
+    UserRoleService().requireAdmin();
     if (_activeCorte == null) return;
 
     final newMov = CajaMovimiento(
@@ -214,6 +217,7 @@ class CajaService extends ChangeNotifier {
     required String notes,
     required List<Venta> allSales,
   }) async {
+    UserRoleService().requireAdmin();
     final live = computeLiveShift(allSales);
     final diff = actualCashCounted - live.expectedCash;
 

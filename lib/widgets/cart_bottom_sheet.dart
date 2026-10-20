@@ -263,7 +263,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.product.name,
+                            item.product.displayName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           if (item.customizationSummary.isNotEmpty) ...[
@@ -342,7 +342,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Total a Cobrar:',
+                  'Total a cobrar:',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.navyBlue),
                 ),
                 Text(

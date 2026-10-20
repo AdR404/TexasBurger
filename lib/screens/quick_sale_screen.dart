@@ -11,6 +11,7 @@ import '../widgets/cart_bottom_sheet.dart';
 import '../widgets/ticket_dialog.dart';
 import '../widgets/product_customizer_dialog.dart';
 import '../widgets/staff_context_selector.dart';
+import '../widgets/product_thumbnail.dart';
 
 class QuickSaleScreen extends StatefulWidget {
   const QuickSaleScreen({super.key});
@@ -69,7 +70,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${customItem.quantity}x ${product.name} personalizado agregado a la orden.'),
+            content: Text('${customItem.quantity}x ${product.displayName} personalizado agregado a la orden.'),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
               label: 'Ver orden',
@@ -200,22 +201,6 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
     );
   }
 
-  IconData _getCategoryIcon(String category, bool isPromo) {
-    if (isPromo) return Icons.star_rate_rounded;
-    switch (category) {
-      case 'Hamburguesas':
-        return Icons.lunch_dining_rounded;
-      case 'Complementos':
-        return Icons.fastfood_rounded;
-      case 'Bebidas':
-        return Icons.local_drink_rounded;
-      case 'Promociones':
-        return Icons.local_offer_rounded;
-      default:
-        return Icons.restaurant_menu;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final products = _productService.availableProducts;
@@ -294,7 +279,6 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                     itemBuilder: (context, index) {
                       final product = filtered[index];
                       final inCartCount = _getCartQuantity(product.id);
-                      final icon = _getCategoryIcon(product.category, product.isPromo);
 
                       return Card(
                         margin: EdgeInsets.zero,
@@ -306,30 +290,18 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.infoSoft,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  icon,
-                                  color: product.isPromo ? AppTheme.promo : AppTheme.navyBlue,
-                                  size: 26,
-                                ),
-                              ),
+                              ProductThumbnail(product: product),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (product.isPromo) ...[
-                                      PromoBadge(text: product.promoNote ?? 'PROMOCIÓN'),
+                                      PromoBadge(text: product.promoNote ?? 'Promoción'),
                                       const SizedBox(height: 4),
                                     ],
                                     Text(
-                                      product.name,
+                                      product.displayName,
                                       style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,

@@ -9,6 +9,8 @@ import 'history_screen.dart';
 import 'caja_screen.dart';
 import 'settings_screen.dart';
 
+enum _Section { sale, dashboard, history, caja, catalog }
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,7 +19,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  _Section _selected = _Section.sale;
+
+  List<_Section> get _destinations => _roleService.isAdmin
+      ? _Section.values
+      : [_Section.sale, _Section.catalog, _Section.history];
   final UserRoleService _roleService = UserRoleService();
 
   @override
@@ -33,15 +39,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onRoleChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        if (!_destinations.contains(_selected)) _selected = _Section.sale;
+      });
+    }
   }
 
-  final List<Widget> _screens = const [
-    QuickSaleScreen(),
-    DailyDashboardScreen(),
-    HistoryScreen(),
-    CajaScreen(),
-    SettingsScreen(),
+  // Fixed slots retain the sale/cart and catalog state when nav order changes.
+  // Restricted screens are unmounted as soon as the role changes.
+  List<Widget> get _screens => [
+    const QuickSaleScreen(),
+    _roleService.isAdmin
+        ? const DailyDashboardScreen()
+        : const SizedBox.shrink(),
+    const HistoryScreen(),
+    _roleService.isAdmin ? const CajaScreen() : const SizedBox.shrink(),
+    const SettingsScreen(),
   ];
 
   List<String> get _subtitles => [
@@ -54,20 +68,49 @@ class _HomeScreenState extends State<HomeScreen> {
         : 'Catálogo del menú (modo consulta)',
   ];
 
+  NavigationDestination _navigationDestination(_Section section) {
+    final (label, icon, selectedIcon) = switch (section) {
+      _Section.sale => (
+        'Venta',
+        Icons.point_of_sale_outlined,
+        Icons.point_of_sale,
+      ),
+      _Section.dashboard => (
+        'Dashboard',
+        Icons.analytics_outlined,
+        Icons.analytics,
+      ),
+      _Section.history => (
+        'Historial',
+        Icons.receipt_long_outlined,
+        Icons.receipt_long,
+      ),
+      _Section.caja => ('Caja', Icons.savings_outlined, Icons.savings),
+      _Section.catalog => (
+        _roleService.isAdmin ? 'Menú' : 'Catálogo',
+        Icons.menu_book_outlined,
+        Icons.menu_book,
+      ),
+    };
+    return NavigationDestination(
+      icon: Icon(icon),
+      selectedIcon: Icon(selectedIcon, color: AppTheme.primary),
+      label: label,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final destinations = _destinations;
     return Scaffold(
       body: Column(
         children: [
           TexasHeader(
-            subtitle: _subtitles[_currentIndex],
+            subtitle: _subtitles[_selected.index],
             trailing: const RoleSwitchButton(),
           ),
           Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
+            child: IndexedStack(index: _selected.index, children: _screens),
           ),
         ],
       ),
@@ -82,37 +125,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) => setState(() => _currentIndex = index),
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.point_of_sale_outlined),
-              selectedIcon: Icon(Icons.point_of_sale, color: AppTheme.primary),
-              label: 'Venta',
-            ),
-            /*const NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics, color: AppTheme.primary),
-              label: 'Dashboard',
-            ),*/
-            const NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long, color: AppTheme.primary),
-              label: 'Historial',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.savings_outlined),
-              selectedIcon: Icon(Icons.savings, color: AppTheme.primary),
-              label: 'Caja',
-            ),
-            NavigationDestination(
-              icon: Icon(
-                _roleService.isAdmin ? Icons.menu_book_outlined : Icons.menu_book,
-              ),
-              selectedIcon: const Icon(Icons.menu_book, color: AppTheme.primary),
-              label: _roleService.isAdmin ? 'Menú' : 'Catálogo',
-            ),
-          ],
+          selectedIndex: destinations.indexOf(_selected),
+          onDestinationSelected: (index) => setState(() {
+            final destination = destinations[index];
+            _selected = _destinations.contains(destination)
+                ? destination
+                : _Section.sale;
+          }),
+          destinations: destinations.map(_navigationDestination).toList(),
         ),
       ),
     );

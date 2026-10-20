@@ -39,13 +39,16 @@ class SaleHistoryList extends StatelessWidget {
 
     final timeFormat = DateFormat('HH:mm:ss');
     final dateFormat = DateFormat('dd/MM/yyyy');
-
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: sales.length,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final venta = sales[index];
+        final now = DateTime.now();
+        final isToday = venta.timestamp.year == now.year &&
+            venta.timestamp.month == now.month &&
+            venta.timestamp.day == now.day;
 
         return Card(
           margin: EdgeInsets.zero,
@@ -88,17 +91,15 @@ class SaleHistoryList extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 4,
                           children: [
-                            Flexible(
-                              child: Text(
-                                isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.navyBlue,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              isToday ? 'Hoy, ${timeFormat.format(venta.timestamp)}' : '${dateFormat.format(venta.timestamp)} ${timeFormat.format(venta.timestamp)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.navyBlue,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -132,7 +133,7 @@ class SaleHistoryList extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          venta.items.map((i) => '${i.quantity}x ${i.product.name}').join(', '),
+                          venta.items.map((i) => '${i.quantity}x ${i.product.displayName}').join(', '),
                           style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

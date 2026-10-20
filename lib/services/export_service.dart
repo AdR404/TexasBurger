@@ -32,7 +32,7 @@ class ExportService {
       }
 
       final productosStr = sale.items
-          .map((i) => '${i.quantity}x ${i.product.name}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}')
+          .map((i) => '${i.quantity}x ${i.product.displayName}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}')
           .join(' + ')
           .replaceAll('"', '""');
 

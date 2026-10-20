@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/producto.dart';
 import 'bootstrap_service.dart';
+import 'user_role_service.dart';
 
 class ProductService extends ChangeNotifier {
   static final ProductService _instance = ProductService._internal();
   factory ProductService() => _instance;
   ProductService._internal();
+
+  @visibleForTesting
+  ProductService.forTesting();
 
   List<Producto> _products = [];
   bool _initialized = false;
@@ -42,12 +46,12 @@ class ProductService extends ChangeNotifier {
           } else {
             final currentProduct = _products[index];
             var updatedProduct = currentProduct;
+            // Enrich existing products without replacing their saved fields.
+            if (updatedProduct.imagePath == null && def.imagePath != null) {
+              updatedProduct = updatedProduct.copyWith(imagePath: def.imagePath);
+            }
             if (updatedProduct.availableExtras.isEmpty && def.availableExtras.isNotEmpty) {
               updatedProduct = updatedProduct.copyWith(availableExtras: def.availableExtras);
-            }
-            if (updatedProduct.name != def.name &&
-                updatedProduct.name.toLowerCase() == def.name.toLowerCase()) {
-              updatedProduct = updatedProduct.copyWith(name: def.name);
             }
             if (!identical(updatedProduct, currentProduct)) {
               _products[index] = updatedProduct;
@@ -77,6 +81,7 @@ class ProductService extends ChangeNotifier {
   }
 
   Future<void> updatePrice(String id, double newPrice) async {
+    UserRoleService().requireAdmin();
     final index = _products.indexWhere((p) => p.id == id);
     if (index != -1) {
       _products[index] = _products[index].copyWith(price: newPrice);
@@ -86,6 +91,7 @@ class ProductService extends ChangeNotifier {
   }
 
   Future<void> toggleAvailability(String id) async {
+    UserRoleService().requireAdmin();
     final index = _products.indexWhere((p) => p.id == id);
     if (index != -1) {
       _products[index] = _products[index].copyWith(isAvailable: !_products[index].isAvailable);
@@ -95,12 +101,14 @@ class ProductService extends ChangeNotifier {
   }
 
   Future<void> addProduct(Producto product) async {
+    UserRoleService().requireAdmin();
     _products.add(product);
     await _save();
     notifyListeners();
   }
 
   Future<void> resetToDefaults() async {
+    UserRoleService().requireAdmin();
     _products = BootstrapService.getDefaultProducts();
     await _save();
     notifyListeners();

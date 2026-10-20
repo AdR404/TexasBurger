@@ -40,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         sales: salesToExport.cast(),
         title: _selectedDate != null
             ? 'Ventas ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}'
-            : 'Historial Completo',
+            : 'Historial completo',
       ),
     );
   }

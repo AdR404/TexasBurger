@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/venta_item.dart';
+import '../services/discount_code_service.dart';
 import '../services/pricing_service.dart';
 import '../theme/app_theme.dart';
 import 'payment_selector.dart';
@@ -10,6 +11,8 @@ class CartBottomSheet extends StatefulWidget {
   final Function(String productId) onDecrement;
   final Function(String productId) onRemove;
   final VoidCallback onClear;
+  final String? initialCouponCode;
+  final ValueChanged<String?>? onCouponChanged;
   final Function({
     required String paymentMethod,
     required double cashGiven,
@@ -30,6 +33,8 @@ class CartBottomSheet extends StatefulWidget {
     required this.onRemove,
     required this.onClear,
     required this.onConfirmSale,
+    this.initialCouponCode,
+    this.onCouponChanged,
   });
 
   @override
@@ -46,9 +51,36 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _discountCodeController = TextEditingController();
+  final DiscountCodeService _discounts = DiscountCodeService();
+  String? _appliedCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _appliedCode = widget.initialCouponCode;
+    _discountCodeController.text = _appliedCode ?? '';
+    _discounts.addListener(_onDiscountChanged);
+  }
+
+  void _onDiscountChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _setCoupon(String? code) {
+    setState(() => _appliedCode = code);
+    widget.onCouponChanged?.call(code);
+  }
+
+  PricingCalculation _calculate() => PricingService.calculate(
+    items: widget.cartItems,
+    coupon: _appliedCode == null ? null : _discounts.findActive(_appliedCode!),
+  );
 
   @override
   void dispose() {
+    _discounts.removeListener(_onDiscountChanged);
+    _discountCodeController.dispose();
     _tableController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
@@ -58,7 +90,7 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final calc = PricingService.calculate(items: widget.cartItems);
+    final calc = _calculate();
 
     return Container(
       padding: EdgeInsets.only(
@@ -247,6 +279,41 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
             const SizedBox(height: 10),
             const Divider(),
 
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _discountCodeController,
+                    textCapitalization: TextCapitalization.characters,
+                    onChanged: (_) { if (_appliedCode != null) _setCoupon(null); },
+                    decoration: const InputDecoration(
+                      labelText: 'Código de descuento', isDense: true,
+                      prefixIcon: Icon(Icons.local_offer_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () {
+                    final code = _discounts.findActive(_discountCodeController.text);
+                    _setCoupon(code?.code);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(code == null ? 'Código inválido o inactivo.' : 'Código ${code.code} aplicado.'),
+                    ));
+                  },
+                  child: const Text('Aplicar'),
+                ),
+              ],
+            ),
+            if (_appliedCode != null)
+              TextButton(
+                onPressed: () { _discountCodeController.clear(); _setCoupon(null); },
+                child: const Text('Quitar código'),
+              ),
+            if (_appliedCode != null && calc.discountCode == null)
+              const Text('El código ya no está disponible. Revisa el total.', style: TextStyle(color: AppTheme.danger)),
+            const SizedBox(height: 10),
+
             // Items List
             ListView.separated(
               shrinkWrap: true,
@@ -327,16 +394,21 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
 
             const SizedBox(height: 12),
 
+            _summaryRow('Subtotal:', calc.subtotal),
+            const SizedBox(height: 5),
             if (calc.discount > 0) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(calc.discountReason ?? 'Descuento aplicado:', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600)),
+                  Expanded(child: Text(calc.discountReason ?? 'Descuento aplicado:', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600))),
                   Text('-\$${calc.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 6),
             ],
+            _summaryRow('Base sin IVA:', calc.taxableSubtotal),
+            _summaryRow('IVA incluido (${(calc.ivaRate * 100).toStringAsFixed(0)}%):', calc.iva),
+            const SizedBox(height: 8),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -359,11 +431,17 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
               height: 50,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  final current = _calculate();
+                  if (current.total != calc.total || current.discountCode != calc.discountCode) {
+                    setState(() {});
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El descuento cambió. Revisa el total antes de cobrar.')));
+                    return;
+                  }
                   widget.onConfirmSale(
                     paymentMethod: _paymentMethod,
                     cashGiven: _cashGiven,
                     changeReturned: _changeReturned,
-                    calc: calc,
+                    calc: current,
                     orderType: _orderType,
                     tableNumber: _orderType == 'Comer aquí' ? _tableController.text.trim() : null,
                     customerName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
@@ -387,4 +465,11 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
       ),
     );
   }
+
+  Widget _summaryRow(String label, double amount) => Row(
+    children: [
+      Expanded(child: Text(label, style: const TextStyle(color: AppTheme.textMuted))),
+      Text('\$${amount.toStringAsFixed(2)}'),
+    ],
+  );
 }

@@ -266,7 +266,8 @@ void main() {
     expect(clipboard, contains('Subtotal: \$192.00'));
     expect(clipboard, contains('Total: \$192.00'));
     expect(clipboard, isNot(contains('Descuento:')));
-    expect(clipboard, isNot(contains('IVA')));
+    expect(clipboard, contains('IVA: No registrado'));
+    expect(clipboard, isNot(contains('IVA incluido')));
     expect(tester.takeException(), isNull);
   });
 

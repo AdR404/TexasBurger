@@ -6,6 +6,7 @@ import 'services/sales_service.dart';
 import 'services/config_service.dart';
 import 'services/caja_service.dart';
 import 'services/db_service.dart';
+import 'services/discount_code_service.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -25,6 +26,7 @@ void main() async {
   await DbService.init();
   await ProductService().init();
   await SalesService().init();
+  await DiscountCodeService().init();
   await ConfigService().init();
   await CajaService().init();
 

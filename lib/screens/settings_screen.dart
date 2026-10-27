@@ -5,6 +5,7 @@ import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 import '../models/producto.dart';
 import '../widgets/admin_access.dart';
+import '../widgets/discount_codes_dialog.dart';
 import '../widgets/product_thumbnail.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -553,6 +554,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.local_offer_outlined, color: AppTheme.primary),
+                        title: const Text('Códigos de descuento'),
+                        subtitle: const Text('Crear, activar y desactivar códigos locales'),
+                        trailing: OutlinedButton(
+                          onPressed: () => showAdminDialog<void>(
+                            context: context,
+                            builder: (_) => const DiscountCodesDialog(),
+                          ),
+                          child: const Text('Administrar'),
+                        ),
+                      ),
+                      const Divider(),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),

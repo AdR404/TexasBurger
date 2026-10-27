@@ -5,6 +5,7 @@ import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import '../services/caja_service.dart';
 import '../services/pricing_service.dart';
+import '../services/discount_code_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/promo_badge.dart';
 import '../widgets/cart_bottom_sheet.dart';
@@ -27,16 +28,19 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   String _selectedCategory = 'Todas';
   String _searchQuery = '';
   final List<VentaItem> _cartItems = [];
+  String? _couponCode;
 
   @override
   void initState() {
     super.initState();
     _productService.addListener(_onServiceUpdate);
+    DiscountCodeService().addListener(_onServiceUpdate);
   }
 
   @override
   void dispose() {
     _productService.removeListener(_onServiceUpdate);
+    DiscountCodeService().removeListener(_onServiceUpdate);
     super.dispose();
   }
 
@@ -100,6 +104,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
           _cartItems[index].quantity--;
         } else {
           _cartItems.removeAt(index);
+          if (_cartItems.isEmpty) _couponCode = null;
         }
       }
     });
@@ -108,12 +113,14 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   void _removeFromCart(String productId) {
     setState(() {
       _cartItems.removeWhere((item) => item.product.id == productId);
+      if (_cartItems.isEmpty) _couponCode = null;
     });
   }
 
   void _clearCart() {
     setState(() {
       _cartItems.clear();
+      _couponCode = null;
     });
   }
 
@@ -138,6 +145,8 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => CartBottomSheet(
         cartItems: _cartItems,
+        initialCouponCode: _couponCode,
+        onCouponChanged: (code) => setState(() => _couponCode = code),
         onIncrement: (id) {
           _incrementCart(id);
           Navigator.pop(ctx);
@@ -178,6 +187,10 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             items: _cartItems,
             subtotal: calc.subtotal,
             discount: calc.discount,
+            iva: calc.iva,
+            ivaRate: calc.ivaRate,
+            ivaIncluded: true,
+            discountCode: calc.discountCode,
             total: calc.total,
             paymentMethod: paymentMethod,
             cashGiven: cashGiven,
@@ -216,7 +229,10 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       return true;
     }).toList();
 
-    final calc = PricingService.calculate(items: _cartItems);
+    final calc = PricingService.calculate(
+      items: _cartItems,
+      coupon: _couponCode == null ? null : DiscountCodeService().findActive(_couponCode!),
+    );
     final totalItems = _cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
 
     return Scaffold(

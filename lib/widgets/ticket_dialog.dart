@@ -41,6 +41,9 @@ class TicketDialog extends StatelessWidget {
     if (venta.discount > 0) {
       buffer.writeln('Descuento: -\$${venta.discount.toStringAsFixed(2)}');
     }
+    if (venta.discountCode != null) buffer.writeln('Código: ${venta.discountCode}');
+    if (venta.taxableSubtotal != null) buffer.writeln('Base sin IVA: \$${venta.taxableSubtotal!.toStringAsFixed(2)}');
+    buffer.writeln('$_ivaLabel: ${venta.iva == null ? 'No registrado' : '\$${venta.iva!.toStringAsFixed(2)}'}');
     buffer.writeln('Total: \$${venta.total.toStringAsFixed(2)}');
     buffer.writeln('Método: ${venta.paymentMethod}');
     if (venta.paymentMethod == 'Efectivo' && venta.changeReturned > 0) {
@@ -49,6 +52,36 @@ class TicketDialog extends StatelessWidget {
     buffer.writeln('¡Gracias por su preferencia!');
     return buffer.toString();
   }
+
+  String get _ivaLabel {
+    final included = venta.ivaIncluded == true ? ' incluido' : '';
+    final rate = venta.ivaRate == null ? '' : ' (${(venta.ivaRate! * 100).toStringAsFixed(0)}%)';
+    return 'IVA$included$rate';
+  }
+
+  Widget _summaryRow(
+    String label,
+    String value, {
+    TextStyle labelStyle = const TextStyle(color: AppTheme.textMuted),
+    TextStyle? valueStyle,
+  }) => LayoutBuilder(
+    builder: (context, constraints) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: Text(label, style: labelStyle)),
+        const SizedBox(width: 8),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.7),
+          child: Text(value, textAlign: TextAlign.right, style: valueStyle),
+        ),
+      ],
+    ),
+  );
+
+  Widget _fiscalRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: _summaryRow(label, value),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -179,37 +212,26 @@ class TicketDialog extends StatelessWidget {
 
               const Divider(height: 22),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Subtotal:', style: TextStyle(color: AppTheme.textMuted)),
-                  Text('\$${venta.subtotal.toStringAsFixed(2)}'),
-                ],
-              ),
+              _summaryRow('Subtotal:', '\$${venta.subtotal.toStringAsFixed(2)}'),
               const SizedBox(height: 4),
               if (venta.discount > 0) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600)),
-                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold)),
-                  ],
+                _summaryRow(
+                  'Descuento / Promo:',
+                  '-\$${venta.discount.toStringAsFixed(2)}',
+                  labelStyle: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.w600),
+                  valueStyle: const TextStyle(color: AppTheme.promo, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
               ],
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Total:',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
-                  ),
-                  Text(
-                    '\$${venta.total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primary),
-                  ),
-                ],
+              if (venta.discountCode != null) _fiscalRow('Código aplicado:', venta.discountCode!),
+              if (venta.taxableSubtotal != null) _fiscalRow('Base sin IVA:', '\$${venta.taxableSubtotal!.toStringAsFixed(2)}'),
+              _fiscalRow('$_ivaLabel:', venta.iva == null ? 'No registrado' : '\$${venta.iva!.toStringAsFixed(2)}'),
+              _summaryRow(
+                'Total:',
+                '\$${venta.total.toStringAsFixed(2)}',
+                labelStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
+                valueStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primary),
               ),
               const SizedBox(height: 10),
 
@@ -219,8 +241,10 @@ class TicketDialog extends StatelessWidget {
                   color: AppTheme.creamBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 12,
+                  runSpacing: 4,
                   children: [
                     Text(
                       'Pago con ${venta.paymentMethod}',
@@ -236,29 +260,34 @@ class TicketDialog extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
-              Row(
+              OverflowBar(
+                alignment: MainAxisAlignment.spaceBetween,
+                spacing: 8,
+                overflowSpacing: 8,
+                overflowAlignment: OverflowBarAlignment.center,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.share, size: 16),
-                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _generateTicketText()));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('¡Ticket copiado al portapapeles!')),
-                        );
-                      },
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(64, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('WhatsApp', softWrap: false, style: TextStyle(fontSize: 12)),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: _generateTicketText()));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('¡Ticket copiado al portapapeles!')),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Aceptar', style: TextStyle(fontSize: 13)),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      minimumSize: const Size(64, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Aceptar', softWrap: false, style: TextStyle(fontSize: 13)),
                   ),
                 ],
               ),

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import '../services/db_service.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 import '../models/producto.dart';
+import '../widgets/admin_access.dart';
+import '../widgets/discount_codes_dialog.dart';
+import '../widgets/product_thumbnail.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,18 +20,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final ProductService _productService = ProductService();
   final SalesService _salesService = SalesService();
   final UserRoleService _roleService = UserRoleService();
+  bool _testingDb = false;
 
   @override
   void initState() {
     super.initState();
     _productService.addListener(_onUpdate);
     _roleService.addListener(_onUpdate);
+    DbService.syncEnabledNotifier.addListener(_onUpdate);
+    DbService.lastSyncStatusNotifier.addListener(_onUpdate);
   }
 
   @override
   void dispose() {
     _productService.removeListener(_onUpdate);
     _roleService.removeListener(_onUpdate);
+    DbService.syncEnabledNotifier.removeListener(_onUpdate);
+    DbService.lastSyncStatusNotifier.removeListener(_onUpdate);
     super.dispose();
   }
 
@@ -43,11 +52,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final controller = TextEditingController(text: p.price.toStringAsFixed(0));
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          'Modificar precio: ${p.name}',
+          'Modificar precio: ${p.displayName}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -65,6 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              if (!_roleService.isAdmin) return;
               final newPrice = double.tryParse(controller.text);
               if (newPrice != null && newPrice > 0) {
                 _productService.updatePrice(p.id, newPrice);
@@ -91,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String category = 'Hamburguesas';
     bool isPromo = false;
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -204,6 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
+                if (!_roleService.isAdmin) return;
                 final name = nameController.text.trim();
                 final price = double.tryParse(priceController.text.trim());
                 if (name.isEmpty || price == null || price <= 0) {
@@ -233,7 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.navyBlue,
-                    content: Text('¡${isPromo ? "Promoción" : "Producto"} "$name" creado correctamente!'),
+                    content: Text('¡${isPromo ? "Promoción" : "Producto"} "${newProd.displayName}" creado correctamente!'),
                   ),
                 );
               },
@@ -454,25 +465,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final p = products[index];
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: CircleAvatar(
-                      backgroundColor: p.isPromo ? AppTheme.promoSoft : AppTheme.creamBg,
-                      child: Icon(
-                        p.isPromo
-                            ? Icons.star_rate_rounded
-                            : p.category == 'Complementos'
-                                ? Icons.fastfood_rounded
-                                : p.category == 'Bebidas'
-                                    ? Icons.local_drink_rounded
-                                    : Icons.lunch_dining_rounded,
-                        color: p.isPromo ? AppTheme.promo : AppTheme.navyBlue,
-                        size: 20,
-                      ),
-                    ),
+                    leading: ProductThumbnail(product: p, size: 40),
                     title: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            p.name,
+                            p.displayName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ),
@@ -484,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
-                              'PROMO',
+                              'Promo',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -517,7 +515,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Switch(
                                 value: p.isAvailable,
                                 activeThumbColor: AppTheme.primary,
-                                onChanged: (val) => _productService.toggleAvailability(p.id),
+                                onChanged: (val) {
+                                  if (!_roleService.isAdmin) return;
+                                  _productService.toggleAvailability(p.id);
+                                },
                               ),
                             ],
                           )
@@ -545,6 +546,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Opciones y Datos: Solo visibles para Admin
             if (isAdmin) ...[
               const Text(
+                'Base de datos en la nube (Supabase)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.navyBlue,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: Icon(
+                          DbService.isSyncEnabled
+                              ? Icons.cloud_done_rounded
+                              : Icons.cloud_off_rounded,
+                          color: DbService.isSyncEnabled
+                              ? Colors.green.shade700
+                              : Colors.orange.shade800,
+                        ),
+                        title: Text(
+                          DbService.isSyncEnabled
+                              ? 'Sincronización con BD activa'
+                              : 'Base de datos frenada (modo local)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          DbService.isSyncEnabled
+                              ? 'Las nuevas ventas y sus detalles se guardan automáticamente en Supabase.'
+                              : 'El envío a Supabase está pausado. Todo se guarda únicamente en el dispositivo.',
+                        ),
+                        value: DbService.isSyncEnabled,
+                        activeThumbColor: Colors.green.shade700,
+                        onChanged: (val) async {
+                          if (!_roleService.isAdmin) return;
+                          final scaffold = ScaffoldMessenger.of(context);
+                          await DbService.setSyncEnabled(val);
+                          scaffold.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                val
+                                    ? 'Sincronización con Supabase activada.'
+                                    : 'Base de datos frenada. Trabajando en modo local.',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 18,
+                            color: AppTheme.textMuted,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              DbService.lastSyncStatusNotifier.value,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.navyBlue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _testingDb
+                                ? null
+                                : () async {
+                                    if (!_roleService.isAdmin) return;
+                                    setState(() => _testingDb = true);
+                                    final scaffold = ScaffoldMessenger.of(context);
+                                    final msg = await DbService.probarConexion();
+                                    if (mounted) {
+                                      setState(() => _testingDb = false);
+                                      scaffold.showSnackBar(
+                                        SnackBar(content: Text(msg)),
+                                      );
+                                    }
+                                  },
+                            icon: _testingDb
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.bolt_rounded, size: 16),
+                            label: Text(
+                              _testingDb ? 'Probando...' : 'Probar BD',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
                 'Opciones y datos (solo administrador)',
                 style: TextStyle(
                   fontSize: 16,
@@ -561,11 +669,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       ListTile(
                         contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.local_offer_outlined, color: AppTheme.primary),
+                        title: const Text('Códigos de descuento'),
+                        subtitle: const Text('Crear, activar y desactivar códigos locales'),
+                        trailing: OutlinedButton(
+                          onPressed: () => showAdminDialog<void>(
+                            context: context,
+                            builder: (_) => const DiscountCodesDialog(),
+                          ),
+                          child: const Text('Administrar'),
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
                         title: const Text('Cargar ventas de demostración'),
                         subtitle: const Text('Genera ventas de ejemplo para visualizar el panel'),
                         trailing: ElevatedButton(
                           onPressed: () async {
+                            if (!_roleService.isAdmin) return;
                             final scaffold = ScaffoldMessenger.of(context);
                             await _salesService.loadSampleSales(_productService.products);
                             scaffold.showSnackBar(
@@ -587,6 +710,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: const Text('Restaura los 10 productos y precios iniciales'),
                         trailing: OutlinedButton(
                           onPressed: () async {
+                            if (!_roleService.isAdmin) return;
                             final scaffold = ScaffoldMessenger.of(context);
                             await _productService.resetToDefaults();
                             scaffold.showSnackBar(
@@ -608,6 +732,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             side: const BorderSide(color: AppTheme.danger),
                           ),
                           onPressed: () async {
+                            if (!_roleService.isAdmin) return;
                             final scaffold = ScaffoldMessenger.of(context);
                             await _salesService.clearAllSales();
                             scaffold.showSnackBar(

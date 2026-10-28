@@ -17,6 +17,13 @@ class UserRoleService extends ChangeNotifier {
   bool get isAdmin => _role == UserRole.admin;
   bool get isUser => _role == UserRole.user;
 
+  /// Local UI permission check; this is not backend authentication.
+  void requireAdmin() {
+    if (!isAdmin) {
+      throw StateError('Esta operación requiere el modo administrador.');
+    }
+  }
+
   /// Simulación de autenticación sin backend
   /// Usuario: admin
   /// Contraseña: admin

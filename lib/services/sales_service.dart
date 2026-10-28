@@ -6,6 +6,7 @@ import '../models/venta_item.dart';
 import '../models/producto.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
+import 'user_role_service.dart';
 
 class SalesService extends ChangeNotifier {
   static final SalesService _instance = SalesService._internal();
@@ -59,6 +60,10 @@ class SalesService extends ChangeNotifier {
     required List<VentaItem> items,
     required double subtotal,
     required double discount,
+    double? iva,
+    double? ivaRate,
+    bool? ivaIncluded,
+    String? discountCode,
     required double total,
     required String paymentMethod,
     double cashGiven = 0.0,
@@ -84,6 +89,10 @@ class SalesService extends ChangeNotifier {
       )).toList(),
       subtotal: subtotal,
       discount: discount,
+      iva: iva,
+      ivaRate: ivaRate,
+      ivaIncluded: ivaIncluded,
+      discountCode: discountCode,
       total: total,
       paymentMethod: paymentMethod,
       cashGiven: cashGiven,
@@ -106,12 +115,14 @@ class SalesService extends ChangeNotifier {
   }
 
   Future<void> cancelSale(String id) async {
+    UserRoleService().requireAdmin();
     _sales.removeWhere((s) => s.id == id);
     await _save();
     notifyListeners();
   }
 
   Future<void> clearAllSales() async {
+    UserRoleService().requireAdmin();
     _sales.clear();
     _lastTicketNumber = 1000;
     await _save();
@@ -119,6 +130,7 @@ class SalesService extends ChangeNotifier {
   }
 
   Future<void> loadSampleSales(List<Producto> catalog) async {
+    UserRoleService().requireAdmin();
     if (catalog.isEmpty) return;
     final now = DateTime.now();
     final pClassic = catalog.firstWhere((p) => p.id == 'hamb_texana_clasica', orElse: () => catalog[0]);

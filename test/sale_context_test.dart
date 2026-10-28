@@ -1,3 +1,4 @@
+import 'package:texas_burger/services/user_role_service.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,7 +52,11 @@ Venta exampleSale({SaleContext? context}) => Venta(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    UserRoleService().switchToUser();
+  });
+  tearDown(() => UserRoleService().switchToUser());
 
   test(
     'catalog IDs are stable and demo staff have no numeric user mapping',
@@ -179,6 +184,7 @@ void main() {
     () async {
       final caja = CajaService.forTesting();
       await caja.init();
+      UserRoleService().loginAdmin('admin', 'admin');
       await caja.abrirCaja(500, saleContext: ana);
       await caja.updateSaleContext(luis);
       await expectLater(caja.updateSaleContext(norte), throwsStateError);

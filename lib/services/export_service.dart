@@ -13,7 +13,7 @@ class ExportService {
     // UTF-8 BOM so Excel opens accented Spanish characters correctly
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas,Empresa_ID,Empresa,Sucursal_ID,Sucursal,Empleado_ID,Atendido_Por',
+      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas,Empresa_ID,Empresa,Sucursal_ID,Sucursal,Empleado_ID,Atendido_Por,Codigo_Descuento,IVA,Tasa_IVA,IVA_Incluido,Base_Sin_IVA',
     );
 
     for (final sale in sales) {
@@ -32,7 +32,7 @@ class ExportService {
       }
 
       final productosStr = sale.items
-          .map((i) => '${i.quantity}x ${i.product.name}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}')
+          .map((i) => '${i.quantity}x ${i.product.displayName}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}')
           .join(' + ')
           .replaceAll('"', '""');
 
@@ -41,6 +41,13 @@ class ExportService {
       final descuento = sale.discount.toStringAsFixed(2);
       final total = sale.total.toStringAsFixed(2);
       final notas = sale.notes.replaceAll('"', '""');
+      final taxColumns = [
+        '"${(sale.discountCode ?? '').replaceAll('"', '""')}"',
+        sale.iva?.toStringAsFixed(2) ?? '',
+        sale.ivaRate == null ? '' : (sale.ivaRate! * 100).toStringAsFixed(2),
+        sale.ivaIncluded == null ? '' : (sale.ivaIncluded! ? 'Si' : 'No'),
+        sale.taxableSubtotal?.toStringAsFixed(2) ?? '',
+      ].join(',');
       final staffColumns = [
         sale.saleContext?.companyId ?? SaleContext.texasBurgerId,
         sale.companyName,
@@ -51,7 +58,7 @@ class ExportService {
       ].map((value) => '"${value.replaceAll('"', '""')}"').join(',');
 
       buffer.writeln(
-        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas",$staffColumns',
+        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas",$staffColumns,$taxColumns',
       );
     }
 

@@ -1,0 +1,935 @@
+From be1aa4a7804dd96e3f962cb2112697f53a27abb6 Mon Sep 17 00:00:00 2001
+From: Juan <juaanp567@gmail.com>
+Date: Sun, 18 Oct 2026 23:35:47 -0600
+Subject: [PATCH] feat: add subtotal tax and discount breakdown
+
+---
+ lib/main.dart                           |   6 +-
+ lib/models/discount_code.dart           |  51 +++++++
+ lib/models/venta.dart                   |  14 +-
+ lib/screens/quick_sale_screen.dart      |   5 +-
+ lib/screens/settings_screen.dart        |  17 ++-
+ lib/services/discount_code_service.dart |  84 +++++++++++
+ lib/services/export_service.dart        |   7 +-
+ lib/services/pricing_service.dart       |  73 ++++++----
+ lib/services/sales_service.dart         |  21 ++-
+ lib/widgets/cart_bottom_sheet.dart      |  73 +++++++++-
+ lib/widgets/discount_codes_dialog.dart  | 180 ++++++++++++++++++++++++
+ lib/widgets/ticket_dialog.dart          |  44 ++++--
+ 12 files changed, 524 insertions(+), 51 deletions(-)
+ create mode 100644 lib/models/discount_code.dart
+ create mode 100644 lib/services/discount_code_service.dart
+ create mode 100644 lib/widgets/discount_codes_dialog.dart
+
+diff --git a/lib/main.dart b/lib/main.dart
+index ca2d771..2b8593b 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -5,7 +5,7 @@ import 'services/product_service.dart';
+ import 'services/sales_service.dart';
+ import 'services/config_service.dart';
+ import 'services/caja_service.dart';
+-import 'services/db_service.dart';
++import 'services/discount_code_service.dart';
+ import 'screens/home_screen.dart';
+ 
+ void main() async {
+@@ -22,9 +22,9 @@ void main() async {
+   );
+ 
+   // Initialize services
+-  await DbService.init();
+   await ProductService().init();
+   await SalesService().init();
++  await DiscountCodeService().init();
+   await ConfigService().init();
+   await CajaService().init();
+ 
+@@ -43,4 +43,4 @@ class TexasBurgerApp extends StatelessWidget {
+       home: const HomeScreen(),
+     );
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/lib/models/discount_code.dart b/lib/models/discount_code.dart
+new file mode 100644
+index 0000000..2b6fef1
+--- /dev/null
++++ b/lib/models/discount_code.dart
+@@ -0,0 +1,51 @@
++enum DiscountKind { percentage, fixedAmount }
++
++class DiscountCode {
++  final String code;
++  final String description;
++  final DiscountKind kind;
++  final double value;
++  final bool isActive;
++
++  const DiscountCode({
++    required this.code,
++    required this.description,
++    required this.kind,
++    required this.value,
++    this.isActive = true,
++  });
++
++  double discountFor(double amount) {
++    final discount = kind == DiscountKind.percentage
++        ? amount * value / 100
++        : value;
++    return discount.clamp(0.0, amount).toDouble();
++  }
++
++  Map<String, dynamic> toJson() => {
++        'code': code,
++        'description': description,
++        'kind': kind.name,
++        'value': value,
++        'isActive': isActive,
++      };
++
++  factory DiscountCode.fromJson(Map<String, dynamic> json) => DiscountCode(
++        code: json['code'] as String,
++        description: json['description'] as String? ?? '',
++        kind: DiscountKind.values.firstWhere(
++          (kind) => kind.name == json['kind'],
++          orElse: () => DiscountKind.percentage,
++        ),
++        value: (json['value'] as num).toDouble(),
++        isActive: json['isActive'] as bool? ?? true,
++      );
++
++  DiscountCode copyWith({bool? isActive}) => DiscountCode(
++        code: code,
++        description: description,
++        kind: kind,
++        value: value,
++        isActive: isActive ?? this.isActive,
++      );
++}
+diff --git a/lib/models/venta.dart b/lib/models/venta.dart
+index feca407..e864eeb 100644
+--- a/lib/models/venta.dart
++++ b/lib/models/venta.dart
+@@ -6,6 +6,9 @@ class Venta {
+   final List<VentaItem> items;
+   final double subtotal;
+   final double discount;
++  final double? iva;
++  final double ivaRate;
++  final String? discountCode;
+   final double total;
+   final String paymentMethod;
+   final double cashGiven;
+@@ -26,6 +29,9 @@ class Venta {
+     required this.items,
+     required this.subtotal,
+     this.discount = 0.0,
++    this.iva,
++    this.ivaRate = 0.16,
++    this.discountCode,
+     required this.total,
+     required this.paymentMethod,
+     this.cashGiven = 0.0,
+@@ -65,6 +71,9 @@ class Venta {
+     'items': items.map((i) => i.toJson()).toList(),
+     'subtotal': subtotal,
+     'discount': discount,
++    'iva': iva,
++    'ivaRate': ivaRate,
++    'discountCode': discountCode,
+     'total': total,
+     'paymentMethod': paymentMethod,
+     'cashGiven': cashGiven,
+@@ -86,6 +95,9 @@ class Venta {
+         .toList(),
+     subtotal: (json['subtotal'] as num).toDouble(),
+     discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
++    iva: (json['iva'] as num?)?.toDouble(),
++    ivaRate: (json['ivaRate'] as num?)?.toDouble() ?? 0.16,
++    discountCode: json['discountCode'] as String?,
+     total: (json['total'] as num).toDouble(),
+     paymentMethod: json['paymentMethod'] as String? ?? 'Efectivo',
+     cashGiven: (json['cashGiven'] as num?)?.toDouble() ?? 0.0,
+@@ -98,4 +110,4 @@ class Venta {
+     customerPhone: json['customerPhone'] as String?,
+     deliveryAddress: json['deliveryAddress'] as String?,
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/lib/screens/quick_sale_screen.dart b/lib/screens/quick_sale_screen.dart
+index 4cae206..edcc8c7 100644
+--- a/lib/screens/quick_sale_screen.dart
++++ b/lib/screens/quick_sale_screen.dart
+@@ -168,6 +168,9 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
+             items: _cartItems,
+             subtotal: calc.subtotal,
+             discount: calc.discount,
++            iva: calc.iva,
++            ivaRate: calc.ivaRate,
++            discountCode: calc.discountCode,
+             total: calc.total,
+             paymentMethod: paymentMethod,
+             cashGiven: cashGiven,
+@@ -534,4 +537,4 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
+       },
+     );
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/lib/screens/settings_screen.dart b/lib/screens/settings_screen.dart
+index 87c67ea..029f03a 100644
+--- a/lib/screens/settings_screen.dart
++++ b/lib/screens/settings_screen.dart
+@@ -4,6 +4,7 @@ import '../services/sales_service.dart';
+ import '../services/user_role_service.dart';
+ import '../theme/app_theme.dart';
+ import '../models/producto.dart';
++import '../widgets/discount_codes_dialog.dart';
+ 
+ class SettingsScreen extends StatefulWidget {
+   const SettingsScreen({super.key});
+@@ -556,6 +557,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
+                   padding: const EdgeInsets.all(16),
+                   child: Column(
+                     children: [
++                      ListTile(
++                        contentPadding: EdgeInsets.zero,
++                        leading: const Icon(Icons.local_offer_outlined, color: AppTheme.primaryRed),
++                        title: const Text('Códigos de descuento'),
++                        subtitle: const Text('Crear, activar y desactivar códigos guardados en este dispositivo'),
++                        trailing: OutlinedButton(
++                          onPressed: () => showDialog<void>(
++                            context: context,
++                            builder: (_) => const DiscountCodesDialog(),
++                          ),
++                          child: const Text('Administrar'),
++                        ),
++                      ),
++                      const Divider(),
+                       ListTile(
+                         contentPadding: EdgeInsets.zero,
+                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
+@@ -624,4 +639,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
+       ),
+     );
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/lib/services/discount_code_service.dart b/lib/services/discount_code_service.dart
+new file mode 100644
+index 0000000..b028085
+--- /dev/null
++++ b/lib/services/discount_code_service.dart
+@@ -0,0 +1,84 @@
++import 'dart:convert';
++
++import 'package:flutter/foundation.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++
++import '../models/discount_code.dart';
++
++class DiscountCodeService extends ChangeNotifier {
++  static final DiscountCodeService _instance = DiscountCodeService._internal();
++  factory DiscountCodeService() => _instance;
++  DiscountCodeService._internal();
++
++  static const _storageKey = 'texas_discount_codes';
++  List<DiscountCode> _codes = [];
++  bool _initialized = false;
++
++  List<DiscountCode> get codes => List.unmodifiable(_codes);
++
++  Future<void> init() async {
++    if (_initialized) return;
++    final prefs = await SharedPreferences.getInstance();
++    final stored = prefs.getString(_storageKey);
++    if (stored != null && stored.isNotEmpty) {
++      try {
++        _codes = (jsonDecode(stored) as List<dynamic>)
++            .map((item) => DiscountCode.fromJson(item as Map<String, dynamic>))
++            .toList();
++      } catch (_) {
++        _codes = [];
++      }
++    }
++    _initialized = true;
++    notifyListeners();
++  }
++
++  DiscountCode? findActive(String code) {
++    final normalized = code.trim().toUpperCase();
++    for (final coupon in _codes) {
++      if (coupon.isActive && coupon.code.toUpperCase() == normalized) {
++        return coupon;
++      }
++    }
++    return null;
++  }
++
++  Future<void> save(DiscountCode code) async {
++    final normalized = code.code.trim().toUpperCase();
++    final index = _codes.indexWhere((item) => item.code.toUpperCase() == normalized);
++    final saved = DiscountCode(
++      code: normalized,
++      description: code.description.trim(),
++      kind: code.kind,
++      value: code.value,
++      isActive: code.isActive,
++    );
++    if (index == -1) {
++      _codes.add(saved);
++    } else {
++      _codes[index] = saved;
++    }
++    await _persist();
++  }
++
++  Future<void> setActive(String code, bool isActive) async {
++    final index = _codes.indexWhere((item) => item.code == code);
++    if (index == -1) return;
++    _codes[index] = _codes[index].copyWith(isActive: isActive);
++    await _persist();
++  }
++
++  Future<void> remove(String code) async {
++    _codes.removeWhere((item) => item.code == code);
++    await _persist();
++  }
++
++  Future<void> _persist() async {
++    final prefs = await SharedPreferences.getInstance();
++    await prefs.setString(
++      _storageKey,
++      jsonEncode(_codes.map((item) => item.toJson()).toList()),
++    );
++    notifyListeners();
++  }
++}
+diff --git a/lib/services/export_service.dart b/lib/services/export_service.dart
+index 8e808ea..11316e4 100644
+--- a/lib/services/export_service.dart
++++ b/lib/services/export_service.dart
+@@ -12,7 +12,7 @@ class ExportService {
+     // UTF-8 BOM so Excel opens accented Spanish characters correctly
+     buffer.write('\uFEFF');
+     buffer.writeln(
+-      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas',
++      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Codigo_Descuento,IVA,Tasa_IVA,Total,Notas',
+     );
+ 
+     for (final sale in sales) {
+@@ -38,11 +38,14 @@ class ExportService {
+       final metodo = sale.paymentMethod;
+       final subtotal = sale.subtotal.toStringAsFixed(2);
+       final descuento = sale.discount.toStringAsFixed(2);
++      final codigoDescuento = sale.discountCode ?? '';
++      final iva = sale.iva?.toStringAsFixed(2) ?? '';
++      final tasaIva = sale.iva == null ? '' : (sale.ivaRate * 100).toStringAsFixed(0);
+       final total = sale.total.toStringAsFixed(2);
+       final notas = sale.notes.replaceAll('"', '""');
+ 
+       buffer.writeln(
+-        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas"',
++        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,"$codigoDescuento",$iva,$tasaIva,$total,"$notas"',
+       );
+     }
+ 
+diff --git a/lib/services/pricing_service.dart b/lib/services/pricing_service.dart
+index 11df88f..19ef502 100644
+--- a/lib/services/pricing_service.dart
++++ b/lib/services/pricing_service.dart
+@@ -1,57 +1,82 @@
+-﻿import '../models/venta_item.dart';
++import '../models/discount_code.dart';
++import '../models/venta_item.dart';
+ 
+ class PricingCalculation {
+   final double subtotal;
+   final double discount;
++  final double taxableSubtotal;
++  final double iva;
++  final double ivaRate;
+   final double total;
+   final String? discountReason;
++  final String? discountCode;
+ 
+   PricingCalculation({
+     required this.subtotal,
+     required this.discount,
++    required this.taxableSubtotal,
++    required this.iva,
++    required this.ivaRate,
+     required this.total,
+     this.discountReason,
++    this.discountCode,
+   });
+ }
+ 
+ class PricingService {
++  static const defaultIvaRate = 0.16;
++
+   static PricingCalculation calculate({
+     required List<VentaItem> items,
+     bool forceMartesPromo = false,
++    DiscountCode? coupon,
++    double ivaRate = defaultIvaRate,
+   }) {
+-    double subtotal = 0.0;
+-    for (var item in items) {
+-      subtotal += item.subtotal;
+-    }
+-
+-    double discount = 0.0;
+-    String? reason;
++    final subtotal = _roundCurrency(
++      items.fold<double>(0, (sum, item) => sum + item.subtotal),
++    );
++    var discount = 0.0;
++    final reasons = <String>[];
+ 
+-    // Check Tuesday promo condition: 2 classic Texas burgers for 150 MXN (regular is 96*2 = 192, savings of 42 MXN)
+     final now = DateTime.now();
+-    final isTuesday = (now.weekday == DateTime.tuesday) || forceMartesPromo;
+-
++    final isTuesday = now.weekday == DateTime.tuesday || forceMartesPromo;
+     if (isTuesday) {
+-      // Check if classic burgers are present
+-      final classicItems = items.where((i) => i.product.id == 'hamb_texana_clasica').toList();
+-      if (classicItems.isNotEmpty) {
+-        int classicCount = classicItems.fold(0, (sum, i) => sum + i.quantity);
+-        int promoPairs = classicCount ~/ 2;
+-        if (promoPairs > 0) {
+-          // Normal price for 2 is 96 * 2 = 192. Promo price is 150. Discount is 42 per pair.
+-          discount += promoPairs * 42.0;
+-          reason = 'Promo Martes 2x aplicada ()';
+-        }
++      final classicCount = items
++          .where((item) => item.product.id == 'hamb_texana_clasica')
++          .fold<int>(0, (sum, item) => sum + item.quantity);
++      final promoPairs = classicCount ~/ 2;
++      if (promoPairs > 0) {
++        discount += promoPairs * 42.0;
++        reasons.add('Promo Martes 2x');
+       }
+     }
+ 
+-    double total = (subtotal - discount).clamp(0.0, double.infinity);
++    if (coupon != null) {
++      final eligibleAmount = (subtotal - discount).clamp(0.0, subtotal).toDouble();
++      discount += coupon.discountFor(eligibleAmount);
++      reasons.add(
++        '${coupon.description.isNotEmpty ? coupon.description : 'Cupón'} (${coupon.code})',
++      );
++    }
++
++    discount = _roundCurrency(discount.clamp(0.0, subtotal).toDouble());
++    final taxableSubtotal = _roundCurrency(
++      (subtotal - discount).clamp(0.0, subtotal).toDouble(),
++    );
++    final iva = _roundCurrency(taxableSubtotal * ivaRate);
++    final total = _roundCurrency(taxableSubtotal + iva);
+ 
+     return PricingCalculation(
+       subtotal: subtotal,
+       discount: discount,
++      taxableSubtotal: taxableSubtotal,
++      iva: iva,
++      ivaRate: ivaRate,
+       total: total,
+-      discountReason: reason,
++      discountReason: reasons.isEmpty ? null : reasons.join(' + '),
++      discountCode: coupon?.code,
+     );
+   }
+-}
+\ No newline at end of file
++
++  static double _roundCurrency(double value) => (value * 100).round() / 100;
++}
+diff --git a/lib/services/sales_service.dart b/lib/services/sales_service.dart
+index 9a90142..09a861f 100644
+--- a/lib/services/sales_service.dart
++++ b/lib/services/sales_service.dart
+@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
+ import '../models/venta.dart';
+ import '../models/venta_item.dart';
+ import '../models/producto.dart';
+-import 'db_service.dart';
+ 
+ class SalesService extends ChangeNotifier {
+   static final SalesService _instance = SalesService._internal();
+@@ -51,6 +50,9 @@ class SalesService extends ChangeNotifier {
+     required List<VentaItem> items,
+     required double subtotal,
+     required double discount,
++    double iva = 0.0,
++    double ivaRate = 0.16,
++    String? discountCode,
+     required double total,
+     required String paymentMethod,
+     double cashGiven = 0.0,
+@@ -76,6 +78,9 @@ class SalesService extends ChangeNotifier {
+       )).toList(),
+       subtotal: subtotal,
+       discount: discount,
++      iva: iva,
++      ivaRate: ivaRate,
++      discountCode: discountCode,
+       total: total,
+       paymentMethod: paymentMethod,
+       cashGiven: cashGiven,
+@@ -92,7 +97,6 @@ class SalesService extends ChangeNotifier {
+     _sales.insert(0, newSale);
+     await _save();
+     notifyListeners();
+-    DbService.guardarVenta(newSale);
+     return newSale;
+   }
+ 
+@@ -127,10 +131,11 @@ class SalesService extends ChangeNotifier {
+         ],
+         subtotal: (pClassic.price * 2) + pCombo.price,
+         discount: 0,
+-        total: (pClassic.price * 2) + pCombo.price,
++        iva: (((pClassic.price * 2) + pCombo.price) * 0.16 * 100).round() / 100,
++        total: ((pClassic.price * 2) + pCombo.price) * 1.16,
+         paymentMethod: 'Efectivo',
+         cashGiven: 400.0,
+-        changeReturned: 400.0 - ((pClassic.price * 2) + pCombo.price),
++        changeReturned: 400.0 - (((pClassic.price * 2) + pCombo.price) * 1.16),
+         timestamp: DateTime(now.year, now.month, now.day, 13, 15),
+       ),
+       Venta(
+@@ -141,7 +146,8 @@ class SalesService extends ChangeNotifier {
+         ],
+         subtotal: pSuper.price * 2,
+         discount: 0,
+-        total: pSuper.price * 2,
++        iva: (pSuper.price * 2 * 0.16 * 100).round() / 100,
++        total: pSuper.price * 2 * 1.16,
+         paymentMethod: 'Tarjeta',
+         timestamp: DateTime(now.year, now.month, now.day, 14, 30),
+       ),
+@@ -154,7 +160,8 @@ class SalesService extends ChangeNotifier {
+         ],
+         subtotal: pWalter.price + pClassic.price,
+         discount: 0,
+-        total: pWalter.price + pClassic.price,
++        iva: ((pWalter.price + pClassic.price) * 0.16 * 100).round() / 100,
++        total: (pWalter.price + pClassic.price) * 1.16,
+         paymentMethod: 'Transferencia',
+         timestamp: DateTime(now.year, now.month, now.day, 16, 45),
+       ),
+@@ -166,4 +173,4 @@ class SalesService extends ChangeNotifier {
+     await _save();
+     notifyListeners();
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/lib/widgets/cart_bottom_sheet.dart b/lib/widgets/cart_bottom_sheet.dart
+index 59a28f4..674670a 100644
+--- a/lib/widgets/cart_bottom_sheet.dart
++++ b/lib/widgets/cart_bottom_sheet.dart
+@@ -1,5 +1,7 @@
+ import 'package:flutter/material.dart';
+ import '../models/venta_item.dart';
++import '../models/discount_code.dart';
++import '../services/discount_code_service.dart';
+ import '../services/pricing_service.dart';
+ import '../theme/app_theme.dart';
+ import 'payment_selector.dart';
+@@ -46,6 +48,8 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
+   final TextEditingController _nameController = TextEditingController();
+   final TextEditingController _phoneController = TextEditingController();
+   final TextEditingController _addressController = TextEditingController();
++  final TextEditingController _discountCodeController = TextEditingController();
++  DiscountCode? _appliedCoupon;
+ 
+   @override
+   void dispose() {
+@@ -53,12 +57,16 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
+     _nameController.dispose();
+     _phoneController.dispose();
+     _addressController.dispose();
++    _discountCodeController.dispose();
+     super.dispose();
+   }
+ 
+   @override
+   Widget build(BuildContext context) {
+-    final calc = PricingService.calculate(items: widget.cartItems);
++    final calc = PricingService.calculate(
++      items: widget.cartItems,
++      coupon: _appliedCoupon,
++    );
+ 
+     return Container(
+       padding: EdgeInsets.only(
+@@ -247,6 +255,44 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
+             const SizedBox(height: 10),
+             const Divider(),
+ 
++            Row(
++              children: [
++                Expanded(
++                  child: TextField(
++                    controller: _discountCodeController,
++                    textCapitalization: TextCapitalization.characters,
++                    onChanged: (_) {
++                      if (_appliedCoupon != null) setState(() => _appliedCoupon = null);
++                    },
++                    decoration: const InputDecoration(
++                      labelText: 'Código de descuento',
++                      prefixIcon: Icon(Icons.local_offer_outlined),
++                      isDense: true,
++                    ),
++                  ),
++                ),
++                const SizedBox(width: 8),
++                OutlinedButton(
++                  onPressed: () {
++                    final code = DiscountCodeService().findActive(_discountCodeController.text);
++                    if (code == null) {
++                      setState(() => _appliedCoupon = null);
++                      ScaffoldMessenger.of(context).showSnackBar(
++                        const SnackBar(content: Text('Código inválido o inactivo.')),
++                      );
++                      return;
++                    }
++                    setState(() => _appliedCoupon = code);
++                    ScaffoldMessenger.of(context).showSnackBar(
++                      SnackBar(content: Text('Código ${code.code} aplicado.')),
++                    );
++                  },
++                  child: const Text('Aplicar'),
++                ),
++              ],
++            ),
++            const SizedBox(height: 10),
++
+             // Items List
+             ListView.separated(
+               shrinkWrap: true,
+@@ -321,16 +367,27 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
+ 
+             const SizedBox(height: 12),
+ 
++            _summaryRow('Subtotal:', calc.subtotal),
+             if (calc.discount > 0) ...[
++              const SizedBox(height: 5),
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+-                  Text(calc.discountReason ?? 'Descuento aplicado:', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
++                  Expanded(
++                    child: Text(
++                      calc.discountReason ?? 'Descuento:',
++                      style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600),
++                    ),
++                  ),
+                   Text('-\$${calc.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                 ],
+               ),
+-              const SizedBox(height: 6),
++              const SizedBox(height: 5),
++              _summaryRow('Base gravable:', calc.taxableSubtotal),
+             ],
++            const SizedBox(height: 5),
++            _summaryRow('IVA (${(calc.ivaRate * 100).toStringAsFixed(0)}%):', calc.iva),
++            const SizedBox(height: 8),
+ 
+             Row(
+               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+@@ -381,4 +438,12 @@ class _CartBottomSheetState extends State<CartBottomSheet> {
+       ),
+     );
+   }
+-}
+\ No newline at end of file
++
++  Widget _summaryRow(String label, double amount) => Row(
++        mainAxisAlignment: MainAxisAlignment.spaceBetween,
++        children: [
++          Text(label, style: const TextStyle(color: AppTheme.textMuted)),
++          Text('\$${amount.toStringAsFixed(2)}'),
++        ],
++      );
++}
+diff --git a/lib/widgets/discount_codes_dialog.dart b/lib/widgets/discount_codes_dialog.dart
+new file mode 100644
+index 0000000..287029c
+--- /dev/null
++++ b/lib/widgets/discount_codes_dialog.dart
+@@ -0,0 +1,180 @@
++import 'package:flutter/material.dart';
++
++import '../models/discount_code.dart';
++import '../services/discount_code_service.dart';
++import '../theme/app_theme.dart';
++
++class DiscountCodesDialog extends StatefulWidget {
++  const DiscountCodesDialog({super.key});
++
++  @override
++  State<DiscountCodesDialog> createState() => _DiscountCodesDialogState();
++}
++
++class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
++  final DiscountCodeService _service = DiscountCodeService();
++  final TextEditingController _codeController = TextEditingController();
++  final TextEditingController _descriptionController = TextEditingController();
++  final TextEditingController _valueController = TextEditingController();
++  DiscountKind _kind = DiscountKind.percentage;
++  String? _error;
++
++  @override
++  void initState() {
++    super.initState();
++    _service.addListener(_refresh);
++  }
++
++  @override
++  void dispose() {
++    _service.removeListener(_refresh);
++    _codeController.dispose();
++    _descriptionController.dispose();
++    _valueController.dispose();
++    super.dispose();
++  }
++
++  void _refresh() {
++    if (mounted) setState(() {});
++  }
++
++  Future<void> _saveCode() async {
++    final code = _codeController.text.trim();
++    final value = double.tryParse(_valueController.text.trim().replaceAll(',', '.'));
++    if (code.isEmpty || value == null || value <= 0 ||
++        (_kind == DiscountKind.percentage && value > 100)) {
++      setState(() => _error = _kind == DiscountKind.percentage
++          ? 'Escribe un código y un porcentaje entre 0.01 y 100.'
++          : 'Escribe un código y una cantidad mayor que 0.');
++      return;
++    }
++
++    await _service.save(DiscountCode(
++      code: code,
++      description: _descriptionController.text.trim(),
++      kind: _kind,
++      value: value,
++    ));
++    if (!mounted) return;
++    _codeController.clear();
++    _descriptionController.clear();
++    _valueController.clear();
++    setState(() => _error = null);
++  }
++
++  String _description(DiscountCode coupon) {
++    final value = coupon.kind == DiscountKind.percentage
++        ? '${coupon.value.toStringAsFixed(coupon.value % 1 == 0 ? 0 : 2)}%'
++        : '\$${coupon.value.toStringAsFixed(2)}';
++    return '${coupon.description.isEmpty ? 'Descuento' : coupon.description} • $value';
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return AlertDialog(
++      title: const Text('Códigos locales'),
++      content: SizedBox(
++        width: 420,
++        height: 390,
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            TextField(
++              controller: _codeController,
++              textCapitalization: TextCapitalization.characters,
++              decoration: const InputDecoration(labelText: 'Código'),
++            ),
++            TextField(
++              controller: _descriptionController,
++              decoration: const InputDecoration(labelText: 'Nombre de la promoción'),
++            ),
++            const SizedBox(height: 8),
++            Row(
++              children: [
++                Expanded(
++                  flex: 3,
++                  child: DropdownButtonFormField<DiscountKind>(
++                    initialValue: _kind,
++                    isExpanded: true,
++                    decoration: const InputDecoration(labelText: 'Tipo'),
++                    items: const [
++                      DropdownMenuItem(
++                        value: DiscountKind.percentage,
++                        child: Text('Porcentaje'),
++                      ),
++                      DropdownMenuItem(
++                        value: DiscountKind.fixedAmount,
++                        child: Text('Cantidad fija'),
++                      ),
++                    ],
++                    onChanged: (value) {
++                      if (value != null) setState(() => _kind = value);
++                    },
++                  ),
++                ),
++                const SizedBox(width: 8),
++                Expanded(
++                  flex: 2,
++                  child: TextField(
++                    controller: _valueController,
++                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
++                    decoration: InputDecoration(
++                      labelText: _kind == DiscountKind.percentage ? 'Porcentaje' : 'MXN',
++                    ),
++                  ),
++                ),
++              ],
++            ),
++            if (_error != null) ...[
++              const SizedBox(height: 4),
++              Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
++            ],
++            Align(
++              alignment: Alignment.centerRight,
++              child: TextButton.icon(
++                onPressed: _saveCode,
++                icon: const Icon(Icons.add),
++                label: const Text('Guardar código'),
++              ),
++            ),
++            const Divider(height: 12),
++            Expanded(
++              child: _service.codes.isEmpty
++                  ? const Center(child: Text('Aún no hay códigos guardados.'))
++                  : ListView.separated(
++                      itemCount: _service.codes.length,
++                      separatorBuilder: (_, _) => const Divider(height: 1),
++                      itemBuilder: (context, index) {
++                        final coupon = _service.codes[index];
++                        return ListTile(
++                          contentPadding: EdgeInsets.zero,
++                          title: Text(coupon.code, style: const TextStyle(fontWeight: FontWeight.bold)),
++                          subtitle: Text(_description(coupon)),
++                          leading: const Icon(Icons.local_offer, color: AppTheme.primaryRed),
++                          trailing: Row(
++                            mainAxisSize: MainAxisSize.min,
++                            children: [
++                              Switch(
++                                value: coupon.isActive,
++                                onChanged: (value) => _service.setActive(coupon.code, value),
++                              ),
++                              IconButton(
++                                tooltip: 'Eliminar código',
++                                icon: const Icon(Icons.delete_outline, color: Colors.red),
++                                onPressed: () => _service.remove(coupon.code),
++                              ),
++                            ],
++                          ),
++                        );
++                      },
++                    ),
++            ),
++          ],
++        ),
++      ),
++      actions: [
++        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
++      ],
++    );
++  }
++}
+diff --git a/lib/widgets/ticket_dialog.dart b/lib/widgets/ticket_dialog.dart
+index 22edd0e..96716fb 100644
+--- a/lib/widgets/ticket_dialog.dart
++++ b/lib/widgets/ticket_dialog.dart
+@@ -33,10 +33,16 @@ class TicketDialog extends StatelessWidget {
+       }
+     }
+     buffer.writeln('---------------------------');
++    buffer.writeln('Subtotal: \$${venta.subtotal.toStringAsFixed(2)}');
+     if (venta.discount > 0) {
+-      buffer.writeln('Subtotal: \$${venta.subtotal.toStringAsFixed(2)}');
+       buffer.writeln('Descuento: -\$${venta.discount.toStringAsFixed(2)}');
+     }
++    if (venta.discountCode != null) buffer.writeln('Código: ${venta.discountCode}');
++    if (venta.iva == null) {
++      buffer.writeln('IVA: No registrado (venta anterior)');
++    } else {
++      buffer.writeln('IVA (${(venta.ivaRate * 100).toStringAsFixed(0)}%): \$${venta.iva!.toStringAsFixed(2)}');
++    }
+     buffer.writeln('TOTAL: \$${venta.total.toStringAsFixed(2)}');
+     buffer.writeln('Método: ${venta.paymentMethod}');
+     if (venta.paymentMethod == 'Efectivo' && venta.changeReturned > 0) {
+@@ -156,24 +162,46 @@ class TicketDialog extends StatelessWidget {
+ 
+               const Divider(height: 22),
+ 
++              Row(
++                mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                children: [
++                  const Text('Subtotal:', style: TextStyle(color: AppTheme.textMuted)),
++                  Text('\$${venta.subtotal.toStringAsFixed(2)}'),
++                ],
++              ),
+               if (venta.discount > 0) ...[
++                const SizedBox(height: 4),
+                 Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   children: [
+-                    const Text('Subtotal:', style: TextStyle(color: AppTheme.textMuted)),
+-                    Text('\$${venta.subtotal.toStringAsFixed(2)}'),
++                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
++                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
+                   ],
+                 ),
+-                const SizedBox(height: 4),
++                const SizedBox(height: 6),
++              ],
++              if (venta.discountCode != null) ...[
+                 Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   children: [
+-                    const Text('Descuento / Promo:', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
+-                    Text('-\$${venta.discount.toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold)),
++                    const Text('Código aplicado:', style: TextStyle(color: AppTheme.textMuted)),
++                    Text(venta.discountCode!),
+                   ],
+                 ),
+-                const SizedBox(height: 6),
++                const SizedBox(height: 4),
+               ],
++              Row(
++                mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                children: [
++                  Text(
++                    venta.iva == null
++                        ? 'IVA:'
++                        : 'IVA (${(venta.ivaRate * 100).toStringAsFixed(0)}%):',
++                    style: const TextStyle(color: AppTheme.textMuted),
++                  ),
++                  Text(venta.iva == null ? 'No registrado' : '\$${venta.iva!.toStringAsFixed(2)}'),
++                ],
++              ),
+ 
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+@@ -245,4 +273,4 @@ class TicketDialog extends StatelessWidget {
+       ),
+     );
+   }
+-}
+\ No newline at end of file
++}
+-- 
+2.52.0.windows.1
+

@@ -4,7 +4,7 @@ import '../models/sale_context.dart';
 import '../services/caja_service.dart';
 import '../theme/app_theme.dart';
 
-/// Used only in the staff interface, never in the customer/order form.
+// Selector de sucursal y cajero en turno
 class StaffContextSelector extends StatefulWidget {
   final SaleContext? initialSelection;
   final bool lockBranch;

@@ -5,12 +5,14 @@ import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import '../services/caja_service.dart';
 import '../services/pricing_service.dart';
+import '../services/discount_code_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/promo_badge.dart';
 import '../widgets/cart_bottom_sheet.dart';
 import '../widgets/ticket_dialog.dart';
 import '../widgets/product_customizer_dialog.dart';
 import '../widgets/staff_context_selector.dart';
+import '../widgets/product_thumbnail.dart';
 
 class QuickSaleScreen extends StatefulWidget {
   const QuickSaleScreen({super.key});
@@ -26,16 +28,19 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   String _selectedCategory = 'Todas';
   String _searchQuery = '';
   final List<VentaItem> _cartItems = [];
+  String? _couponCode;
 
   @override
   void initState() {
     super.initState();
     _productService.addListener(_onServiceUpdate);
+    DiscountCodeService().addListener(_onServiceUpdate);
   }
 
   @override
   void dispose() {
     _productService.removeListener(_onServiceUpdate);
+    DiscountCodeService().removeListener(_onServiceUpdate);
     super.dispose();
   }
 
@@ -69,7 +74,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${customItem.quantity}x ${product.name} personalizado agregado a la orden.'),
+            content: Text('${customItem.quantity}x ${product.displayName} personalizado agregado a la orden.'),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
               label: 'Ver orden',
@@ -99,6 +104,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
           _cartItems[index].quantity--;
         } else {
           _cartItems.removeAt(index);
+          if (_cartItems.isEmpty) _couponCode = null;
         }
       }
     });
@@ -107,12 +113,14 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   void _removeFromCart(String productId) {
     setState(() {
       _cartItems.removeWhere((item) => item.product.id == productId);
+      if (_cartItems.isEmpty) _couponCode = null;
     });
   }
 
   void _clearCart() {
     setState(() {
       _cartItems.clear();
+      _couponCode = null;
     });
   }
 
@@ -137,6 +145,8 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => CartBottomSheet(
         cartItems: _cartItems,
+        initialCouponCode: _couponCode,
+        onCouponChanged: (code) => setState(() => _couponCode = code),
         onIncrement: (id) {
           _incrementCart(id);
           Navigator.pop(ctx);
@@ -177,6 +187,10 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             items: _cartItems,
             subtotal: calc.subtotal,
             discount: calc.discount,
+            iva: calc.iva,
+            ivaRate: calc.ivaRate,
+            ivaIncluded: true,
+            discountCode: calc.discountCode,
             total: calc.total,
             paymentMethod: paymentMethod,
             cashGiven: cashGiven,
@@ -200,22 +214,6 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
     );
   }
 
-  IconData _getCategoryIcon(String category, bool isPromo) {
-    if (isPromo) return Icons.star_rate_rounded;
-    switch (category) {
-      case 'Hamburguesas':
-        return Icons.lunch_dining_rounded;
-      case 'Complementos':
-        return Icons.fastfood_rounded;
-      case 'Bebidas':
-        return Icons.local_drink_rounded;
-      case 'Promociones':
-        return Icons.local_offer_rounded;
-      default:
-        return Icons.restaurant_menu;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final products = _productService.availableProducts;
@@ -231,7 +229,10 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       return true;
     }).toList();
 
-    final calc = PricingService.calculate(items: _cartItems);
+    final calc = PricingService.calculate(
+      items: _cartItems,
+      coupon: _couponCode == null ? null : DiscountCodeService().findActive(_couponCode!),
+    );
     final totalItems = _cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
 
     return Scaffold(
@@ -294,7 +295,6 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                     itemBuilder: (context, index) {
                       final product = filtered[index];
                       final inCartCount = _getCartQuantity(product.id);
-                      final icon = _getCategoryIcon(product.category, product.isPromo);
 
                       return Card(
                         margin: EdgeInsets.zero,
@@ -306,30 +306,18 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.infoSoft,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  icon,
-                                  color: product.isPromo ? AppTheme.promo : AppTheme.navyBlue,
-                                  size: 26,
-                                ),
-                              ),
+                              ProductThumbnail(product: product),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (product.isPromo) ...[
-                                      PromoBadge(text: product.promoNote ?? 'PROMOCIÓN'),
+                                      PromoBadge(text: product.promoNote ?? 'Promoción'),
                                       const SizedBox(height: 4),
                                     ],
                                     Text(
-                                      product.name,
+                                      product.displayName,
                                       style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,

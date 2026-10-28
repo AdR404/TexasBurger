@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/corte_caja.dart';
 import '../models/venta.dart';
 import '../models/sale_context.dart';
+import 'user_role_service.dart';
 
 class CajaService extends ChangeNotifier {
   static final CajaService _instance = CajaService._internal();
@@ -59,8 +60,7 @@ class CajaService extends ChangeNotifier {
     }
 
     _initialized = true;
-    // Recover the opening selection if the separate active selection is absent.
-    // The opening employee is not used to rewrite any historical sale.
+    // Si hay un turno abierto sin selección activa en memoria, recupera la del inicio del turno
     if (isCajaOpen) {
       final opening = _activeCorte!.openingContext;
       if (_saleContext == null || (opening != null && _saleContext!.branchId != opening.branchId)) {
@@ -97,6 +97,7 @@ class CajaService extends ChangeNotifier {
   }
 
   Future<void> abrirCaja(double initialCash, {required SaleContext saleContext}) async {
+    UserRoleService().requireAdmin();
     if (isCajaOpen) throw StateError('Ya hay un turno abierto.');
     _saleContext = saleContext;
     _activeCorte = CorteCaja(
@@ -117,6 +118,7 @@ class CajaService extends ChangeNotifier {
     required double amount,
     required String concept,
   }) async {
+    UserRoleService().requireAdmin();
     if (_activeCorte == null) return;
 
     final newMov = CajaMovimiento(
@@ -214,6 +216,7 @@ class CajaService extends ChangeNotifier {
     required String notes,
     required List<Venta> allSales,
   }) async {
+    UserRoleService().requireAdmin();
     final live = computeLiveShift(allSales);
     final diff = actualCashCounted - live.expectedCash;
 

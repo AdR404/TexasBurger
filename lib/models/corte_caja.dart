@@ -34,7 +34,7 @@ class CajaMovimiento {
 
 class CorteCaja {
   final String id;
-  /// Opening employee only; each sale records its own attending employee.
+  // Empleado y sucursal con los que se abrió el turno de caja
   final SaleContext? openingContext;
   final DateTime openedAt;
   final DateTime? closedAt;

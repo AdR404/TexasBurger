@@ -8,6 +8,8 @@ import '../services/sales_service.dart';
 import '../services/export_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/staff_context_selector.dart';
+import '../widgets/admin_access.dart';
+import '../services/user_role_service.dart';
 
 class CajaScreen extends StatefulWidget {
   const CajaScreen({super.key});
@@ -44,7 +46,7 @@ class _CajaScreenState extends State<CajaScreen> {
     SaleContext? selection = _cajaService.saleContext;
     bool opening = false;
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
@@ -86,6 +88,7 @@ class _CajaScreenState extends State<CajaScreen> {
                   label: Text('\$$val'),
                   backgroundColor: controller.text == '$val' ? AppTheme.primarySoft : AppTheme.creamBg,
                   onPressed: () {
+              if (!UserRoleService().isAdmin) return;
                     setDialogState(() {
                       controller.text = '$val';
                     });
@@ -101,6 +104,7 @@ class _CajaScreenState extends State<CajaScreen> {
             ),
             ElevatedButton(
               onPressed: selection == null || opening ? null : () async {
+                if (!UserRoleService().isAdmin) return;
                 setDialogState(() => opening = true);
                 final amount = double.tryParse(controller.text) ?? 0.0;
                 await _cajaService.abrirCaja(amount, saleContext: selection!);
@@ -119,7 +123,7 @@ class _CajaScreenState extends State<CajaScreen> {
     final conceptController = TextEditingController();
     final isGasto = type == 'salida';
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -171,6 +175,7 @@ class _CajaScreenState extends State<CajaScreen> {
               backgroundColor: isGasto ? AppTheme.danger : AppTheme.successGreen,
             ),
             onPressed: () async {
+              if (!UserRoleService().isAdmin) return;
               final amount = double.tryParse(amountController.text) ?? 0.0;
               final concept = conceptController.text.trim();
               if (amount > 0 && concept.isNotEmpty) {
@@ -189,7 +194,7 @@ class _CajaScreenState extends State<CajaScreen> {
     final countedController = TextEditingController(text: live.expectedCash.toStringAsFixed(0));
     final notesController = TextEditingController();
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -233,7 +238,7 @@ class _CajaScreenState extends State<CajaScreen> {
                         if (live.cashIn > 0) _buildRow('Entradas extra:', '+\$${live.cashIn.toStringAsFixed(2)}'),
                         if (live.cashOut > 0) _buildRow('Gastos / Salidas:', '-\$${live.cashOut.toStringAsFixed(2)}', isNegative: true),
                         const Divider(height: 16),
-                        _buildRow('EFECTIVO ESPERADO:', '\$${live.expectedCash.toStringAsFixed(2)}', isBold: true),
+                        _buildRow('Efectivo esperado:', '\$${live.expectedCash.toStringAsFixed(2)}', isBold: true),
                       ],
                     ),
                   ),
@@ -284,6 +289,7 @@ class _CajaScreenState extends State<CajaScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
                 onPressed: () async {
+              if (!UserRoleService().isAdmin) return;
                   final closedCorte = await _cajaService.cerrarCaja(
                     actualCashCounted: counted,
                     notes: notesController.text.trim(),
@@ -306,9 +312,10 @@ class _CajaScreenState extends State<CajaScreen> {
   void _showCorteResultDialog(CorteCaja corte) {
     final report = ExportService.generateWhatsAppCorteReport(corte);
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('¡Corte de caja finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
@@ -335,6 +342,7 @@ class _CajaScreenState extends State<CajaScreen> {
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('Copiar para WhatsApp'),
             onPressed: () {
+              if (!UserRoleService().isAdmin) return;
               Clipboard.setData(ClipboardData(text: report));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('¡Corte copiado! Puedes pegarlo en WhatsApp.')),
@@ -368,7 +376,9 @@ class _CajaScreenState extends State<CajaScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AdminAccess(builder: _buildAdminContent);
+
+  Widget _buildAdminContent(BuildContext context) {
     final isOpen = _cajaService.isCajaOpen;
     final live = _cajaService.computeLiveShift(_salesService.sales);
     final history = _cajaService.cortesHistory;

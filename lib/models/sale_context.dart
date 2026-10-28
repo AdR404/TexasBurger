@@ -1,5 +1,5 @@
-/// Snapshot of the staff selection when a sale is completed.
-/// Names are retained so later catalog changes cannot rewrite old tickets.
+// Datos de la sucursal y del empleado que registró la venta.
+// Se guardan los nombres en el ticket para mantener el historial aunque cambie el catálogo.
 class SaleContext {
   static const texasBurgerId = 'texas_burger';
   static const texasBurgerName = 'Texas Burger';

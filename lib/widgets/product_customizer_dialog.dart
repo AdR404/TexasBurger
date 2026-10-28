@@ -80,7 +80,7 @@ class _ProductCustomizerDialogState extends State<ProductCustomizerDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.product.name,
+                        widget.product.displayName,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,

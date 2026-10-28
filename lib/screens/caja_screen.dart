@@ -428,7 +428,7 @@ class _CajaScreenState extends State<CajaScreen> {
                 ),
               ),
             ] else ...[
-              // Open Shift Live Dashboard
+              // Turno abierto
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

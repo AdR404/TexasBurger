@@ -564,13 +564,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
                         title: const Text('Cargar Ventas de Demostración'),
-                        subtitle: const Text('Genera ventas de ejemplo para visualizar el Dashboard'),
+                        subtitle: const Text('Genera ventas de ejemplo para visualizar el historial'),
                         trailing: ElevatedButton(
                           onPressed: () async {
                             final scaffold = ScaffoldMessenger.of(context);
                             await _salesService.loadSampleSales(_productService.products);
                             scaffold.showSnackBar(
-                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el Dashboard.')),
+                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el Historial.')),
                             );
                           },
                           style: ElevatedButton.styleFrom(

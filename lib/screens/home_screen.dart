@@ -4,7 +4,6 @@ import '../widgets/role_switch_button.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 import 'quick_sale_screen.dart';
-import 'daily_dashboard_screen.dart';
 import 'history_screen.dart';
 import 'caja_screen.dart';
 import 'settings_screen.dart';
@@ -38,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = const [
     QuickSaleScreen(),
-    DailyDashboardScreen(),
     HistoryScreen(),
     CajaScreen(),
     SettingsScreen(),
@@ -46,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> get _subtitles => [
     'Punto de Venta / Venta Rápida',
-    'Métricas Diarias y Rendimiento',
     'Historial de Tickets y Órdenes',
     'Arqueo de Turno y Control de Efectivo',
     _roleService.isAdmin
@@ -84,16 +81,12 @@ class _HomeScreenState extends State<HomeScreen> {
         child: NavigationBar(
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) => setState(() => _currentIndex = index),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: [
             const NavigationDestination(
               icon: Icon(Icons.point_of_sale_outlined),
               selectedIcon: Icon(Icons.point_of_sale, color: AppTheme.primaryRed),
               label: 'Venta',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics, color: AppTheme.primaryRed),
-              label: 'Dashboard',
             ),
             const NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),

@@ -8,6 +8,7 @@ import '../models/producto.dart';
 import '../widgets/admin_access.dart';
 import '../widgets/discount_codes_dialog.dart';
 import '../widgets/product_thumbnail.dart';
+import 'inventory_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final SalesService _salesService = SalesService();
   final UserRoleService _roleService = UserRoleService();
   bool _testingDb = false;
+  bool _inventoryOpen = false;
 
   @override
   void initState() {
@@ -41,7 +43,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _onUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    setState(() {
+      if (!_roleService.isAdmin) {
+        _inventoryOpen = false;
+      }
+    });
   }
 
   void _showEditPriceDialog(Producto p) {
@@ -280,6 +288,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final products = _productService.products;
     final isAdmin = _roleService.isAdmin;
+
+    if (isAdmin && _inventoryOpen) {
+      return InventoryScreen(
+        onBack: () {
+          setState(() => _inventoryOpen = false);
+        },
+      );
+    }
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -667,6 +683,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.inventory_2_outlined,
+                          color: AppTheme.primary,
+                        ),
+                        title: const Text(
+                          'Inventario de materia prima',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: const Text(
+                          'Control de ingredientes, lotes y caducidades',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          if (!_roleService.isAdmin) return;
+
+                          setState(() {
+                            _inventoryOpen = true;
+                          });
+                        },
+                      ),
+                      const Divider(),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.local_offer_outlined, color: AppTheme.primary),

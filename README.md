@@ -1,16 +1,89 @@
-# texas_burger
+## Instalación y ejecución
 
-A new Flutter project.
+Texas Burger es una aplicación desarrollada en Flutter y Dart para Android, que utiliza Supabase como base de datos.
 
-## Getting Started
+### Requisitos
 
-This project is a starting point for a Flutter application.
+* Flutter SDK instalado.
+* Android Studio.
+* Emulador Android o dispositivo físico.
+* Conexión a Internet para utilizar Supabase.
 
-A few resources to get you started if this is your first Flutter project:
+### Ejecutar la aplicación
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Clonar el repositorio y cambiar a la rama de integración:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd TexasBurguer
+```
+
+2. Instalar las dependencias:
+
+```bash
+flutter pub get
+```
+
+3. Iniciar un emulador Android o conectar un dispositivo con depuración USB habilitada.
+
+4. Ejecutar la aplicación:
+
+```bash
+flutter run --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true
+```
+
+**Importante:** utilizar el parámetro `TEXAS_ENABLE_SIMPLE_SALES=true` para habilitar el registro de ventas en Supabase.
+
+### Configuración de Supabase
+
+La aplicación utiliza el proyecto Supabase configurado en el código.
+
+Para trabajar con las funciones remotas:
+
+1. Abrir Texas Burger.
+2. Seleccionar la sucursal y el empleado correspondientes.
+3. Activar la conexión remota desde Configuración.
+4. Para Inventario y Caja, iniciar sesión con una cuenta autorizada de Supabase Auth.
+
+Las cuentas de administrador local y de Supabase Auth son independientes.
+
+El acceso remoto a Inventario y Caja requiere autorización en `inventario_admins`.
+
+**Importante:** PEDIR CREACIÓN DE CUENTA PARA ACCEDER A LA BASE DE DATOS DESDE LA APLICACIÓN.
+
+### Funcionalidades disponibles
+
+* Registro de ventas.
+* Productos, promociones y descuentos.
+* Tickets de compra.
+* Historial de ventas.
+* Apertura y cierre de caja.
+* Entradas y salidas de efectivo.
+* Inventario de ingredientes.
+* Registro de lotes, salidas y descartes.
+* Control de existencias y caducidades.
+
+Ventas, Historial, Caja e Inventario están conectados a Supabase cuando se utiliza el modo remoto correspondiente.
+
+### Generar APK
+
+Para generar el APK de Android:
+
+```bash
+flutter build apk --release --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true
+```
+
+El archivo generado se encuentra en:
+
+```text
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+### Consideraciones
+
+* La aplicación requiere conexión a Internet para realizar operaciones remotas.
+* Los datos registrados en Supabase son compartidos entre los dispositivos que utilizan el mismo proyecto.
+* Inventario y Caja requieren una sesión remota autorizada.
+* Para operar Caja, configurar correctamente la fecha, hora y zona horaria del dispositivo (`America/Monterrey`, UTC−6).
+* El historial y la caja locales son independientes de sus registros remotos; no existe sincronización automática entre ambos modos.
+* Las ventas de prueba realizadas contra Supabase generan registros reales.

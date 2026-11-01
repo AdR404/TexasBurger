@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/sales_service.dart';
 import '../services/dashboard_service.dart';
@@ -5,6 +6,9 @@ import '../theme/app_theme.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/sale_chart.dart';
 import '../widgets/export_dialog.dart';
+import '../models/producto.dart';
+import '../widgets/admin_access.dart';
+import '../services/user_role_service.dart';
 
 
 class DailyDashboardScreen extends StatefulWidget {
@@ -35,16 +39,22 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AdminAccess(builder: _buildAdminContent);
+
+  Widget _buildAdminContent(BuildContext context) {
     final sales = _salesService.sales;
     final metrics = DashboardService.computeMetrics(sales, _selectedPeriod);
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             // Period Selector Tabs with Export
             Row(
               children: [
@@ -71,12 +81,13 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
                   tooltip: 'Exportar ventas del periodo',
                   onPressed: () {
+                    if (!UserRoleService().isAdmin) return;
                     final pSales = DashboardService.filterSales(sales, _selectedPeriod);
-                    showDialog(
+                    showAdminDialog(
                       context: context,
                       builder: (ctx) => ExportDialog(
                         sales: pSales,
-                        title: 'Periodo ${_selectedPeriod.name.toUpperCase()}',
+                        title: 'Periodo ${_selectedPeriod.name}',
                       ),
                     );
                   },
@@ -169,13 +180,17 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            GridView.count(
+            GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.45,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                // Altura adaptable para evitar que el texto se corte en pantallas pequeñas
+                mainAxisExtent:
+                    144 * MediaQuery.textScalerOf(context).scale(14) / 14,
+              ),
               children: [
                 MetricCard(
                   title: 'Venta máxima',
@@ -192,14 +207,14 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                   accentColor: AppTheme.infoBlue,
                 ),
                 MetricCard(
-                  title: 'Promedio / Ticket',
+                  title: 'Promedio / ticket',
                   value: '\$${metrics.ticketPromedio.toStringAsFixed(2)}',
                   subtitle: 'Gasto medio por cliente',
                   icon: Icons.trending_up_rounded,
                   accentColor: AppTheme.successGreen,
                 ),
                 MetricCard(
-                  title: 'Burgers / Venta',
+                  title: 'Burgers / venta',
                   value: metrics.promedioHamburguesasPorVenta.toStringAsFixed(1),
                   subtitle: 'Unidades promedio',
                   icon: Icons.lunch_dining_rounded,
@@ -277,7 +292,7 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              entry.key,
+                              Producto.formatDisplayName(entry.key),
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -306,6 +321,98 @@ class _DailyDashboardScreenState extends State<DailyDashboardScreen> {
               ),
             ],
           ],
+        ),
+      ),
+    ),
+          _buildComingSoonOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComingSoonOverlay() {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.55),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 390),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.goldSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.analytics_rounded,
+                    color: AppTheme.navyBlue,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.creamBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: const Text(
+                    'PRÓXIMAMENTE · VERSIÓN 2.0',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                      color: AppTheme.navyBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'En desarrollo, dashboard disponible en versión 2',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.navyBlue,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Estamos preparando métricas avanzadas, gráficas en tiempo real y comparativas de rendimiento para tu sucursal.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

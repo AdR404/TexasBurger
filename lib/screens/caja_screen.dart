@@ -8,9 +8,15 @@ import '../services/sales_service.dart';
 import '../services/export_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/staff_context_selector.dart';
+import '../widgets/admin_access.dart';
+import '../services/user_role_service.dart';
+import '../services/db_service.dart';
+import '../services/operator_session.dart';
+import '../widgets/operator_access_card.dart';
 
 class CajaScreen extends StatefulWidget {
-  const CajaScreen({super.key});
+  const CajaScreen({super.key, this.active = true});
+  final bool active;
 
   @override
   State<CajaScreen> createState() => _CajaScreenState();
@@ -19,18 +25,38 @@ class CajaScreen extends StatefulWidget {
 class _CajaScreenState extends State<CajaScreen> {
   final CajaService _cajaService = CajaService();
   final SalesService _salesService = SalesService();
+  OperatorSession? _session;
+  bool _operating = false;
 
   @override
   void initState() {
     super.initState();
     _cajaService.addListener(_onUpdate);
-    _salesService.addListener(_onUpdate);
+    _salesService.addListener(_onSalesUpdate);
+    DbService.syncEnabledNotifier.addListener(_onRemoteChanged);
+    _session = DbService.session;
+    _session?.addListener(_onRemoteChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.active) _cajaService.refreshRemote();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CajaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.active) _cajaService.refreshRemote();
+      });
+    }
   }
 
   @override
   void dispose() {
     _cajaService.removeListener(_onUpdate);
-    _salesService.removeListener(_onUpdate);
+    _salesService.removeListener(_onSalesUpdate);
+    DbService.syncEnabledNotifier.removeListener(_onRemoteChanged);
+    _session?.removeListener(_onRemoteChanged);
     super.dispose();
   }
 
@@ -38,13 +64,43 @@ class _CajaScreenState extends State<CajaScreen> {
     if (mounted) setState(() {});
   }
 
+  void _onSalesUpdate() {
+    if (_cajaService.remoteMode) {
+      if (widget.active) _cajaService.refreshRemote();
+    } else { _onUpdate(); }
+  }
+
+  void _onRemoteChanged() {
+    _cajaService.invalidateRemote();
+    if (widget.active) _cajaService.refreshRemote();
+  }
+
+  Future<bool> _operate(Future<void> Function() action) async {
+    if (_operating) return false;
+    _operating = true;
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      if (mounted) {
+        await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+          title: const Text('Revisar Caja'),
+          content: Text(e is StateError ? e.message.toString() : 'No se pudo completar la operación de Caja.'),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Aceptar'))],
+        ));
+      }
+      return false;
+    } finally { _operating = false; }
+  }
+
   void _showAbrirCajaDialog() {
+    final remoteMode = _cajaService.remoteMode;
     final controller = TextEditingController(text: '500');
     final presets = [300, 500, 800, 1000, 1500];
     SaleContext? selection = _cajaService.saleContext;
     bool opening = false;
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
@@ -86,6 +142,7 @@ class _CajaScreenState extends State<CajaScreen> {
                   label: Text('\$$val'),
                   backgroundColor: controller.text == '$val' ? AppTheme.primarySoft : AppTheme.creamBg,
                   onPressed: () {
+              if (!UserRoleService().isAdmin) return;
                     setDialogState(() {
                       controller.text = '$val';
                     });
@@ -101,10 +158,17 @@ class _CajaScreenState extends State<CajaScreen> {
             ),
             ElevatedButton(
               onPressed: selection == null || opening ? null : () async {
+                if (!UserRoleService().isAdmin) return;
                 setDialogState(() => opening = true);
                 final amount = double.tryParse(controller.text) ?? 0.0;
-                await _cajaService.abrirCaja(amount, saleContext: selection!);
-                if (ctx.mounted) Navigator.pop(ctx);
+                final success = await _operate(() async {
+                  if (remoteMode && double.tryParse(controller.text) == null) throw StateError('Ingresa un fondo inicial válido.');
+                  if (remoteMode != _cajaService.remoteMode) throw StateError('Cambió el modo de Caja. Abre nuevamente el formulario.');
+                  await _cajaService.abrirCaja(amount, saleContext: selection!);
+                });
+                if (ctx.mounted) {
+                  if (success) { Navigator.pop(ctx); } else { setDialogState(() => opening = false); }
+                }
               },
               child: const Text('Iniciar Turno'),
             ),
@@ -115,11 +179,13 @@ class _CajaScreenState extends State<CajaScreen> {
   }
 
   void _showMovimientoDialog({required String type}) {
+    final remoteMode = _cajaService.remoteMode;
+    final turnId = _cajaService.activeCorte?.id;
     final amountController = TextEditingController();
     final conceptController = TextEditingController();
     final isGasto = type == 'salida';
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -171,11 +237,15 @@ class _CajaScreenState extends State<CajaScreen> {
               backgroundColor: isGasto ? AppTheme.danger : AppTheme.successGreen,
             ),
             onPressed: () async {
+              if (!UserRoleService().isAdmin) return;
               final amount = double.tryParse(amountController.text) ?? 0.0;
               final concept = conceptController.text.trim();
               if (amount > 0 && concept.isNotEmpty) {
-                await _cajaService.registrarMovimiento(type: type, amount: amount, concept: concept);
-                if (ctx.mounted) Navigator.pop(ctx);
+                final success = await _operate(() async {
+                  if (remoteMode != _cajaService.remoteMode || turnId != _cajaService.activeCorte?.id) throw StateError('Cambió el turno o modo de Caja. Abre nuevamente el formulario.');
+                  await _cajaService.registrarMovimiento(type: type, amount: amount, concept: concept);
+                });
+                if (success && ctx.mounted) Navigator.pop(ctx);
               }
             },
             child: const Text('Guardar'),
@@ -186,10 +256,11 @@ class _CajaScreenState extends State<CajaScreen> {
   }
 
   void _showCierreCajaDialog(CorteCaja live) {
-    final countedController = TextEditingController(text: live.expectedCash.toStringAsFixed(0));
+    final remoteMode = _cajaService.remoteMode;
+    final countedController = TextEditingController(text: live.expectedCash.toStringAsFixed(2));
     final notesController = TextEditingController();
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -233,7 +304,7 @@ class _CajaScreenState extends State<CajaScreen> {
                         if (live.cashIn > 0) _buildRow('Entradas extra:', '+\$${live.cashIn.toStringAsFixed(2)}'),
                         if (live.cashOut > 0) _buildRow('Gastos / Salidas:', '-\$${live.cashOut.toStringAsFixed(2)}', isNegative: true),
                         const Divider(height: 16),
-                        _buildRow('EFECTIVO ESPERADO:', '\$${live.expectedCash.toStringAsFixed(2)}', isBold: true),
+                        _buildRow('Efectivo esperado:', '\$${live.expectedCash.toStringAsFixed(2)}', isBold: true),
                       ],
                     ),
                   ),
@@ -284,14 +355,20 @@ class _CajaScreenState extends State<CajaScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
                 onPressed: () async {
-                  final closedCorte = await _cajaService.cerrarCaja(
+              if (!UserRoleService().isAdmin) return;
+                  CorteCaja? closedCorte;
+                  final success = await _operate(() async {
+                    if (remoteMode && double.tryParse(countedController.text) == null) throw StateError('Ingresa un efectivo contado válido.');
+                    if (remoteMode != _cajaService.remoteMode || _cajaService.activeCorte?.id != live.id) throw StateError('Cambió el turno. Actualiza Caja antes de cerrar.');
+                    closedCorte = await _cajaService.cerrarCaja(
                     actualCashCounted: counted,
                     notes: notesController.text.trim(),
                     allSales: _salesService.sales,
-                  );
-                  if (ctx.mounted) {
+                    );
+                  });
+                  if (success && ctx.mounted) {
                     Navigator.pop(ctx);
-                    _showCorteResultDialog(closedCorte);
+                    _showCorteResultDialog(closedCorte!);
                   }
                 },
                 child: const Text('Cerrar Turno'),
@@ -306,9 +383,10 @@ class _CajaScreenState extends State<CajaScreen> {
   void _showCorteResultDialog(CorteCaja corte) {
     final report = ExportService.generateWhatsAppCorteReport(corte);
 
-    showDialog(
+    showAdminDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('¡Corte de caja finalizado!', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
@@ -335,6 +413,7 @@ class _CajaScreenState extends State<CajaScreen> {
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('Copiar para WhatsApp'),
             onPressed: () {
+              if (!UserRoleService().isAdmin) return;
               Clipboard.setData(ClipboardData(text: report));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('¡Corte copiado! Puedes pegarlo en WhatsApp.')),
@@ -368,7 +447,20 @@ class _CajaScreenState extends State<CajaScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => AdminAccess(builder: _buildAdminContent);
+
+  Widget _buildAdminContent(BuildContext context) {
+    if (_cajaService.remoteMode && (_cajaService.remoteBusy || !_cajaService.remoteReady || _cajaService.remoteError != null)) {
+      return Scaffold(body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
+        const OperatorAccessCard(contextMessage: 'Caja requiere una cuenta remota autorizada en inventario_admins. No se utilizarán turnos ni ventas locales.'),
+        const StaffContextBar(),
+        if (_cajaService.remoteBusy) const LinearProgressIndicator(),
+        if (!_cajaService.remoteBusy) ...[
+          Text(_cajaService.remoteError ?? 'Actualiza para consultar Caja de la sucursal seleccionada.'),
+          TextButton.icon(onPressed: _cajaService.refreshRemote, icon: const Icon(Icons.refresh), label: const Text('Actualizar Caja')),
+        ],
+      ])));
+    }
     final isOpen = _cajaService.isCajaOpen;
     final live = _cajaService.computeLiveShift(_salesService.sales);
     final history = _cajaService.cortesHistory;
@@ -381,6 +473,11 @@ class _CajaScreenState extends State<CajaScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const StaffContextBar(),
+            if (_cajaService.remoteMode) ...[
+              const OperatorAccessCard(contextMessage: 'Caja remota · America/Monterrey (UTC−6). Antes de cerrar, detengan los cobros de esta sucursal en todos los dispositivos.'),
+              TextButton.icon(onPressed: _cajaService.refreshRemote, icon: const Icon(Icons.refresh), label: const Text('Actualizar Caja')),
+              const Text('Cortes: últimos 50 de esta sucursal. Ventas del turno: consulta completa al actualizar y al cerrar.'),
+            ],
             const SizedBox(height: 12),
             // Status Card
             if (!isOpen) ...[
@@ -713,7 +810,12 @@ class _CajaScreenState extends State<CajaScreen> {
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                onPressed: () => _showCorteResultDialog(c),
+                                onPressed: () async {
+                                  if (!_cajaService.remoteMode) { _showCorteResultDialog(c); return; }
+                                  CorteCaja? detailed;
+                                  final success = await _operate(() async { detailed = await _cajaService.remoteClosedDetails(c); });
+                                  if (success && mounted && UserRoleService().isAdmin && _cajaService.remoteMode) _showCorteResultDialog(detailed!);
+                                },
                               ),
                             ],
                           ),

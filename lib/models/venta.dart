@@ -7,6 +7,10 @@ class Venta {
   final List<VentaItem> items;
   final double subtotal;
   final double discount;
+  final double? iva;
+  final double? ivaRate;
+  final bool? ivaIncluded;
+  final String? discountCode;
   final double total;
   final String paymentMethod;
   final double cashGiven;
@@ -28,6 +32,10 @@ class Venta {
     required this.items,
     required this.subtotal,
     this.discount = 0.0,
+    this.iva,
+    this.ivaRate,
+    this.ivaIncluded,
+    this.discountCode,
     required this.total,
     required this.paymentMethod,
     this.cashGiven = 0.0,
@@ -41,6 +49,8 @@ class Venta {
     this.customerPhone,
     this.deliveryAddress,
   });
+
+  double? get taxableSubtotal => iva == null ? null : ((total - iva!) * 100).round() / 100;
 
   int get totalItemsCount => items.fold(0, (sum, i) => sum + i.quantity);
 
@@ -72,6 +82,10 @@ class Venta {
     'items': items.map((i) => i.toJson()).toList(),
     'subtotal': subtotal,
     'discount': discount,
+    if (iva != null) 'iva': iva,
+    if (ivaRate != null) 'ivaRate': ivaRate,
+    if (ivaIncluded != null) 'ivaIncluded': ivaIncluded,
+    if (discountCode != null) 'discountCode': discountCode,
     'total': total,
     'paymentMethod': paymentMethod,
     'cashGiven': cashGiven,
@@ -94,6 +108,10 @@ class Venta {
         .toList(),
     subtotal: (json['subtotal'] as num).toDouble(),
     discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
+    iva: (json['iva'] as num?)?.toDouble(),
+    ivaRate: (json['ivaRate'] as num?)?.toDouble(),
+    ivaIncluded: json['ivaIncluded'] as bool?,
+    discountCode: json['discountCode'] as String?,
     total: (json['total'] as num).toDouble(),
     paymentMethod: json['paymentMethod'] as String? ?? 'Efectivo',
     cashGiven: (json['cashGiven'] as num?)?.toDouble() ?? 0.0,

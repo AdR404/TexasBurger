@@ -1,5 +1,5 @@
--- SOLO LECTURA. Preparado para revisión posterior; no ejecutado por esta tarea.
--- Ejecutar con el propietario de la BD y comparar los resultados antes de 001.
+-- Consultas de apoyo para revisar las columnas, restricciones y políticas RLS
+-- de las tablas de ventas y personal en Supabase.
 select table_name, column_name, data_type, is_nullable, column_default
 from information_schema.columns
 where table_schema = 'public'

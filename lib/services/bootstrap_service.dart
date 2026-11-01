@@ -28,6 +28,7 @@ class BootstrapService {
       // PROMOCIONES
       Producto(
         id: 'promo_martes',
+        imagePath: 'assets/images/promo_martes.png',
         name: 'Martes: 2 hamburguesas clásicas Texas',
         description: 'El día martes te llevas 2 hamburguesas texanas clásicas en promoción.',
         price: 150.0,
@@ -38,6 +39,7 @@ class BootstrapService {
       ),
       Producto(
         id: 'combo_pollo_especial',
+        imagePath: 'assets/images/combo_pollo_especial.png',
         name: 'Combo de hamburguesa de pollo',
         description: 'Hamburguesa de pollo + papas a la francesa medianas + refresco de 600 ml.',
         price: 139.0,

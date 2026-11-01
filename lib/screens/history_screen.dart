@@ -4,9 +4,12 @@ import '../services/sales_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sale_history_list.dart';
 import '../widgets/export_dialog.dart';
+import '../services/db_service.dart';
+import '../widgets/remote_sale_history.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  const HistoryScreen({super.key, this.active = true});
+  final bool active;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -21,11 +24,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _salesService.addListener(_onServiceUpdate);
+    DbService.syncEnabledNotifier.addListener(_onServiceUpdate);
   }
 
   @override
   void dispose() {
     _salesService.removeListener(_onServiceUpdate);
+    DbService.syncEnabledNotifier.removeListener(_onServiceUpdate);
     super.dispose();
   }
 
@@ -40,13 +45,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         sales: salesToExport.cast(),
         title: _selectedDate != null
             ? 'Ventas ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}'
-            : 'Historial Completo',
+            : 'Historial completo',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (DbService.onlineSalesEnabled && DbService.isSyncEnabled) {
+      return RemoteSaleHistory(active: widget.active);
+    }
     final allSales = _salesService.sales;
 
     final filteredSales = allSales.where((sale) {

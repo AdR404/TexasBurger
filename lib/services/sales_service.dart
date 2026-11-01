@@ -6,6 +6,7 @@ import '../models/venta_item.dart';
 import '../models/producto.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
+import 'user_role_service.dart';
 
 class SalesService extends ChangeNotifier {
   static final SalesService _instance = SalesService._internal();
@@ -14,13 +15,23 @@ class SalesService extends ChangeNotifier {
 
   @visibleForTesting
   SalesService.forTesting({required Future<void> Function(Venta) remoteWriter})
-      : _remoteWriter = remoteWriter;
+    : _remoteWriter = remoteWriter;
 
   final Future<void> Function(Venta) _remoteWriter;
 
   List<Venta> _sales = [];
   int _lastTicketNumber = 1000;
   bool _initialized = false;
+  // Avoid overlapping writes to the existing SharedPreferences history.
+  Future<void> _writes = Future<void>.value();
+  Future<T> _serialize<T>(Future<T> Function() action) {
+    final task = _writes.then((_) => action());
+    _writes = task.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stack) {},
+    );
+    return task;
+  }
 
   List<Venta> get sales => List.unmodifiable(_sales);
 
@@ -28,15 +39,24 @@ class SalesService extends ChangeNotifier {
     if (_initialized) return;
     final prefs = await SharedPreferences.getInstance();
     _lastTicketNumber = prefs.getInt('texas_last_ticket') ?? 1000;
-    
+
     final jsonString = prefs.getString('texas_sales');
     if (jsonString != null && jsonString.isNotEmpty) {
       try {
         final List<dynamic> list = jsonDecode(jsonString);
-        _sales = list.map((item) => Venta.fromJson(item as Map<String, dynamic>)).toList();
+        _sales = list
+            .map((item) => Venta.fromJson(item as Map<String, dynamic>))
+            .toList();
         _sales.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       } catch (e) {
-        _sales = [];
+        throw StateError(
+          'No se pudo leer el historial local; no se sobrescribirá.',
+        );
+      }
+    }
+    for (final sale in _sales) {
+      if (sale.ticketNumber > _lastTicketNumber) {
+        _lastTicketNumber = sale.ticketNumber;
       }
     }
     _initialized = true;
@@ -45,9 +65,13 @@ class SalesService extends ChangeNotifier {
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('texas_last_ticket', _lastTicketNumber);
+    if (!await prefs.setInt('texas_last_ticket', _lastTicketNumber)) {
+      throw StateError('No se pudo guardar la numeración');
+    }
     final jsonString = jsonEncode(_sales.map((s) => s.toJson()).toList());
-    await prefs.setString('texas_sales', jsonString);
+    if (!await prefs.setString('texas_sales', jsonString)) {
+      throw StateError('No se pudo guardar el historial');
+    }
   }
 
   int getNextTicketNumber() {
@@ -59,6 +83,10 @@ class SalesService extends ChangeNotifier {
     required List<VentaItem> items,
     required double subtotal,
     required double discount,
+    double? iva,
+    double? ivaRate,
+    bool? ivaIncluded,
+    String? discountCode,
     required double total,
     required String paymentMethod,
     double cashGiven = 0.0,
@@ -69,21 +97,28 @@ class SalesService extends ChangeNotifier {
     String? customerName,
     String? customerPhone,
     String? deliveryAddress,
-  }) async {
-    _lastTicketNumber++;
+  }) => _serialize(() async {
     final newSale = Venta(
-      id: 'txs_${DateTime.now().millisecondsSinceEpoch}',
-      ticketNumber: _lastTicketNumber,
-      items: items.map((item) => VentaItem(
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        selectedExtras: List.from(item.selectedExtras),
-        removedIngredients: List.from(item.removedIngredients),
-        notes: item.notes,
-      )).toList(),
+      id: 'txs_${DateTime.now().microsecondsSinceEpoch}_${_lastTicketNumber + 1}',
+      ticketNumber: _lastTicketNumber + 1,
+      items: items
+          .map(
+            (item) => VentaItem(
+              product: item.product,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              selectedExtras: List.from(item.selectedExtras),
+              removedIngredients: List.from(item.removedIngredients),
+              notes: item.notes,
+            ),
+          )
+          .toList(),
       subtotal: subtotal,
       discount: discount,
+      iva: iva,
+      ivaRate: ivaRate,
+      ivaIncluded: ivaIncluded,
+      discountCode: discountCode,
       total: total,
       paymentMethod: paymentMethod,
       cashGiven: cashGiven,
@@ -98,20 +133,32 @@ class SalesService extends ChangeNotifier {
       deliveryAddress: deliveryAddress,
     );
 
+    await _remoteWriter(newSale);
+    _lastTicketNumber = newSale.ticketNumber;
     _sales.insert(0, newSale);
-    await _save();
+    try {
+      await _save();
+    } catch (_) {
+      if (DbService.onlineSalesEnabled && DbService.isSyncEnabled) {
+        notifyListeners();
+        throw StateError('Venta registrada en Supabase, pero falló el historial local. No repitas el cobro.');
+      }
+      _sales.removeWhere((sale) => sale.id == newSale.id);
+      rethrow;
+    }
     notifyListeners();
-    _remoteWriter(newSale);
     return newSale;
-  }
+  });
 
   Future<void> cancelSale(String id) async {
+    UserRoleService().requireAdmin();
     _sales.removeWhere((s) => s.id == id);
     await _save();
     notifyListeners();
   }
 
   Future<void> clearAllSales() async {
+    UserRoleService().requireAdmin();
     _sales.clear();
     _lastTicketNumber = 1000;
     await _save();
@@ -119,12 +166,25 @@ class SalesService extends ChangeNotifier {
   }
 
   Future<void> loadSampleSales(List<Producto> catalog) async {
+    UserRoleService().requireAdmin();
     if (catalog.isEmpty) return;
     final now = DateTime.now();
-    final pClassic = catalog.firstWhere((p) => p.id == 'hamb_texana_clasica', orElse: () => catalog[0]);
-    final pSuper = catalog.firstWhere((p) => p.id == 'hamb_super_texana', orElse: () => catalog[1]);
-    final pCombo = catalog.firstWhere((p) => p.id == 'combo_pollo_especial', orElse: () => catalog[0]);
-    final pWalter = catalog.firstWhere((p) => p.id == 'hamb_walter_especial', orElse: () => catalog[0]);
+    final pClassic = catalog.firstWhere(
+      (p) => p.id == 'hamb_texana_clasica',
+      orElse: () => catalog[0],
+    );
+    final pSuper = catalog.firstWhere(
+      (p) => p.id == 'hamb_super_texana',
+      orElse: () => catalog[1],
+    );
+    final pCombo = catalog.firstWhere(
+      (p) => p.id == 'combo_pollo_especial',
+      orElse: () => catalog[0],
+    );
+    final pWalter = catalog.firstWhere(
+      (p) => p.id == 'hamb_walter_especial',
+      orElse: () => catalog[0],
+    );
 
     final samples = [
       Venta(
@@ -171,7 +231,7 @@ class SalesService extends ChangeNotifier {
 
     _sales.addAll(samples);
     _sales.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    _lastTicketNumber = 1003;
+    if (_lastTicketNumber < 1003) _lastTicketNumber = 1003;
     await _save();
     notifyListeners();
   }

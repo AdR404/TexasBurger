@@ -1,6 +1,6 @@
 import '../models/sale_context.dart';
 
-/// Stable local IDs. Demo employee IDs are NOT IDs from Supabase usuarios.
+// Catálogo local de sucursales y personal de caja
 class StaffCatalog {
   static const branches = {
     'perimetral_sur': 'Perimetral Sur',

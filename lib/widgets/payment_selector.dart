@@ -29,8 +29,14 @@ class _PaymentSelectorState extends State<PaymentSelector> {
   void initState() {
     super.initState();
     _cashTendered = widget.totalAmount;
-    _cashController.text = widget.totalAmount.toStringAsFixed(0);
+    _cashController.text = widget.totalAmount.toStringAsFixed(2);
     _calculateChange();
+  }
+
+  @override
+  void dispose() {
+    _cashController.dispose();
+    super.dispose();
   }
 
   @override
@@ -39,7 +45,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
     if (oldWidget.totalAmount != widget.totalAmount) {
       if (_cashTendered < widget.totalAmount) {
         _cashTendered = widget.totalAmount;
-        _cashController.text = widget.totalAmount.toStringAsFixed(0);
+        _cashController.text = widget.totalAmount.toStringAsFixed(2);
       }
       _calculateChange();
     }
@@ -61,7 +67,7 @@ class _PaymentSelectorState extends State<PaymentSelector> {
   void _setCash(double amount) {
     setState(() {
       _cashTendered = amount;
-      _cashController.text = amount.toStringAsFixed(0);
+      _cashController.text = amount.toStringAsFixed(2);
       _calculateChange();
     });
   }

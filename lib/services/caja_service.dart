@@ -4,26 +4,114 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/corte_caja.dart';
 import '../models/venta.dart';
 import '../models/sale_context.dart';
+import 'user_role_service.dart';
+import 'db_service.dart';
+import 'caja_repository.dart';
 
 class CajaService extends ChangeNotifier {
   static final CajaService _instance = CajaService._internal();
   factory CajaService() => _instance;
-  CajaService._internal();
+  CajaService._internal() : _testLocal = false;
 
   @visibleForTesting
-  CajaService.forTesting();
+  CajaService.forTesting() : _testLocal = true;
+  final bool _testLocal;
 
   CorteCaja? _activeCorte;
   List<CorteCaja> _cortesHistory = [];
   bool _initialized = false;
   SaleContext? _saleContext;
 
+  final CajaRepository _remote = CajaRepository();
+  CajaSnapshot? _snapshot;
+  String? _snapshotActor;
+  String? remoteError;
+  bool remoteBusy = false;
+  int _remoteRevision = 0;
+  bool get remoteMode => !_testLocal && DbService.onlineSalesEnabled && DbService.isSyncEnabled;
+  bool get remoteReady => _validSnapshot;
+  bool get _validSnapshot => _snapshot != null &&
+      _snapshotActor == DbService.session?.validOperatorId && _snapshotActor != null;
+
+  void invalidateRemote() {
+    _remoteRevision++;
+    _snapshot = null;
+    _snapshotActor = null;
+    remoteError = null;
+    if (!remoteMode && _activeCorte != null && !_activeCorte!.isClosed &&
+        _activeCorte!.openingContext != null &&
+        _saleContext?.branchId != _activeCorte!.openingContext!.branchId) {
+      _saleContext = _activeCorte!.openingContext;
+    }
+    notifyListeners();
+  }
+
+  Future<void> refreshRemote() async {
+    if (!remoteMode || remoteBusy) return;
+    final revision = ++_remoteRevision;
+    remoteBusy = true;
+    _snapshot = null;
+    remoteError = null;
+    notifyListeners();
+    try {
+      final actor = DbService.session?.validOperatorId;
+      final branch = _saleContext?.branchId;
+      if (branch == null) throw StateError('Selecciona sucursal y empleado para consultar Caja.');
+      final snapshot = await _remote.load(branch);
+      if (revision != _remoteRevision || !remoteMode || branch != _saleContext?.branchId || actor != DbService.session?.validOperatorId) return;
+      _snapshot = snapshot;
+      _snapshotActor = actor;
+    } catch (e) {
+      if (revision == _remoteRevision) remoteError = _remoteMessage(e);
+    } finally {
+      remoteBusy = false;
+      notifyListeners();
+    }
+  }
+
+  String _remoteMessage(Object error) => error is StateError
+      ? error.message.toString()
+      : 'No se pudo consultar u operar Caja remota. Revisa conexión, sesión y permisos. No se utilizaron importes locales.';
+
+  Future<T> _remoteOperation<T>(Future<T> Function() operation) async {
+    if (remoteBusy) throw StateError('Espera a que termine la operación de Caja.');
+    remoteBusy = true;
+    remoteError = null;
+    notifyListeners();
+    try {
+      return await operation();
+    } catch (e) {
+      _snapshot = null;
+      remoteError = _remoteMessage(e);
+      throw StateError(remoteError!);
+    } finally {
+      remoteBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _reloadConfirmed(String branch) async {
+    try {
+      final actor = DbService.session?.validOperatorId;
+      final snapshot = await _remote.load(branch);
+      if (!remoteMode || branch != _saleContext?.branchId || actor != DbService.session?.validOperatorId) throw StateError('Cambió la sesión o sucursal');
+      _snapshot = snapshot;
+      _snapshotActor = actor;
+    } catch (_) {
+      throw StateError('La operación fue confirmada por Supabase, pero no se pudo actualizar Caja. No repitas la operación; pulsa Actualizar.');
+    }
+  }
+
+  Future<CorteCaja> remoteClosedDetails(CorteCaja turn) => _remote.closed(int.parse(turn.id), turn.openingContext!.branchId);
+
   SaleContext? get saleContext => _saleContext;
   bool get isBranchLocked => isCajaOpen && _saleContext != null;
 
-  bool get isCajaOpen => _activeCorte != null && !_activeCorte!.isClosed;
-  CorteCaja? get activeCorte => _activeCorte;
-  List<CorteCaja> get cortesHistory => List.unmodifiable(_cortesHistory);
+  bool get isCajaOpen => activeCorte != null && !activeCorte!.isClosed;
+  CorteCaja? get activeCorte => remoteMode ? (_validSnapshot ? _snapshot!.active : null) : _activeCorte;
+  List<CorteCaja> get cortesHistory => remoteMode
+      ? (_validSnapshot ? List.unmodifiable(_snapshot!.history) : const [])
+      : List.unmodifiable(_cortesHistory);
 
   Future<void> init() async {
     if (_initialized) return;
@@ -59,9 +147,8 @@ class CajaService extends ChangeNotifier {
     }
 
     _initialized = true;
-    // Recover the opening selection if the separate active selection is absent.
-    // The opening employee is not used to rewrite any historical sale.
-    if (isCajaOpen) {
+    // Si hay un turno abierto sin selección activa en memoria, recupera la del inicio del turno
+    if (!remoteMode && _activeCorte != null && !_activeCorte!.isClosed) {
       final opening = _activeCorte!.openingContext;
       if (_saleContext == null || (opening != null && _saleContext!.branchId != opening.branchId)) {
         _saleContext = opening;
@@ -92,11 +179,25 @@ class CajaService extends ChangeNotifier {
       throw StateError('La sucursal se conserva hasta cerrar el turno.');
     }
     _saleContext = selection;
+    if (remoteMode) invalidateRemote();
     await _save();
+    if (remoteMode) await refreshRemote();
     notifyListeners();
   }
 
   Future<void> abrirCaja(double initialCash, {required SaleContext saleContext}) async {
+    UserRoleService().requireAdmin();
+    if (remoteMode) {
+      await _remoteOperation(() async {
+        final prefs = await SharedPreferences.getInstance();
+        // Persist only the selection, never remote shifts as local shifts.
+        if (!await prefs.setString('texas_staff_context', jsonEncode(saleContext.toJson()))) throw StateError('No se pudo conservar la selección de sucursal.');
+        _saleContext = saleContext;
+        await _remote.open(saleContext, initialCash);
+        await _reloadConfirmed(saleContext.branchId);
+      });
+      return;
+    }
     if (isCajaOpen) throw StateError('Ya hay un turno abierto.');
     _saleContext = saleContext;
     _activeCorte = CorteCaja(
@@ -117,6 +218,16 @@ class CajaService extends ChangeNotifier {
     required double amount,
     required String concept,
   }) async {
+    UserRoleService().requireAdmin();
+    if (remoteMode) {
+      final turn = activeCorte;
+      if (turn == null || remoteError != null) throw StateError('Actualiza Caja antes de registrar un movimiento.');
+      await _remoteOperation(() async {
+        await _remote.movement(turn, type, amount, concept);
+        await _reloadConfirmed(turn.openingContext!.branchId);
+      });
+      return;
+    }
     if (_activeCorte == null) return;
 
     final newMov = CajaMovimiento(
@@ -160,6 +271,9 @@ class CajaService extends ChangeNotifier {
   }
 
   CorteCaja computeLiveShift(List<Venta> allSales) {
+    if (remoteMode) {
+      return activeCorte ?? CorteCaja(id: 'none', openedAt: DateTime.now(), initialCash: 0, expectedCash: 0);
+    }
     if (_activeCorte == null) {
       return CorteCaja(
         id: 'none',
@@ -214,6 +328,22 @@ class CajaService extends ChangeNotifier {
     required String notes,
     required List<Venta> allSales,
   }) async {
+    UserRoleService().requireAdmin();
+    if (remoteMode) {
+      final turn = activeCorte;
+      if (turn == null || remoteError != null) throw StateError('Actualiza Caja antes de cerrar el turno.');
+      return _remoteOperation(() async {
+        final id = await _remote.close(turn, actualCashCounted, notes);
+        CorteCaja closed;
+        try {
+          closed = await _remote.closed(id, turn.openingContext!.branchId);
+        } catch (_) {
+          throw StateError('Cierre confirmado, pero no se pudo recuperar el corte. No repitas el cierre; actualiza Caja.');
+        }
+        await _reloadConfirmed(turn.openingContext!.branchId);
+        return closed;
+      });
+    }
     final live = computeLiveShift(allSales);
     final diff = actualCashCounted - live.expectedCash;
 

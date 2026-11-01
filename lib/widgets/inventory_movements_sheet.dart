@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/inventory_lot.dart';
+import '../services/inventory_repository.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 import 'inventory_expiry_badge.dart';
@@ -36,29 +36,30 @@ class InventoryMovementDraft {
 }
 
 Future<InventoryMovementDraft?> showInventoryMovementsSheet(
-    BuildContext context, {
-      required List<InventoryLot> lots,
-      required bool isDemo,
-    }) {
+  BuildContext context, {
+  required List<InventoryLot> lots,
+  required bool isDemo,
+  List<Map<String, dynamic>> history = const [],
+}) {
   return showModalBottomSheet<InventoryMovementDraft>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _InventoryMovementsSheet(
-      lots: lots,
-      isDemo: isDemo,
-    ),
+    builder: (_) =>
+        _InventoryMovementsSheet(lots: lots, isDemo: isDemo, history: history),
   );
 }
 
 class _InventoryMovementsSheet extends StatefulWidget {
   final List<InventoryLot> lots;
   final bool isDemo;
+  final List<Map<String, dynamic>> history;
 
   const _InventoryMovementsSheet({
     required this.lots,
     required this.isDemo,
+    required this.history,
   });
 
   @override
@@ -66,8 +67,7 @@ class _InventoryMovementsSheet extends StatefulWidget {
       _InventoryMovementsSheetState();
 }
 
-class _InventoryMovementsSheetState
-    extends State<_InventoryMovementsSheet> {
+class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController();
   final _reasonController = TextEditingController();
@@ -83,17 +83,13 @@ class _InventoryMovementsSheetState
   }
 
   double? _parseQuantity(String text) {
-    return double.tryParse(
-      text.trim().replaceAll(',', '.'),
-    );
+    return double.tryParse(text.trim().replaceAll(',', '.'));
   }
 
   void _validateMovement(InventoryLot? selectedLot) {
     if (!UserRoleService().isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Acceso exclusivo para administradores.'),
-        ),
+        const SnackBar(content: Text('Acceso exclusivo para administradores.')),
       );
       return;
     }
@@ -101,9 +97,7 @@ class _InventoryMovementsSheetState
     if (!_formKey.currentState!.validate()) return;
     if (selectedLot == null) return;
 
-    final quantity = _parseQuantity(
-      _quantityController.text,
-    )!;
+    final quantity = _parseQuantity(_quantityController.text)!;
 
     final type = _section == 'Salidas'
         ? InventoryMovementKind.salida
@@ -113,10 +107,7 @@ class _InventoryMovementsSheetState
     if (quantity <= 0 ||
         quantity > selectedLot.availableQuantity ||
         (type == InventoryMovementKind.salida &&
-            inventoryDaysToExpire(
-              selectedLot.expirationDate,
-            ) <
-                0)) {
+            inventoryDaysToExpire(selectedLot.expirationDate) < 0)) {
       return;
     }
 
@@ -145,17 +136,12 @@ class _InventoryMovementsSheetState
 
       // Un lote caducado no puede seleccionarse
       // para una salida de consumo.
-      if (isSalida &&
-          inventoryDaysToExpire(lot.expirationDate) < 0) {
+      if (isSalida && inventoryDaysToExpire(lot.expirationDate) < 0) {
         return false;
       }
 
       return true;
-    }).toList()
-      ..sort(
-            (a, b) =>
-            a.expirationDate.compareTo(b.expirationDate),
-      );
+    }).toList()..sort((a, b) => a.expirationDate.compareTo(b.expirationDate));
 
     InventoryLot? selectedLot;
 
@@ -175,9 +161,7 @@ class _InventoryMovementsSheetState
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            18, 8, 18, 28,
-          ),
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -201,7 +185,7 @@ class _InventoryMovementsSheetState
                   ),
                   child: const Text(
                     'MODO DEMOSTRACIÓN: estos lotes '
-                        'son simulados y no se guardarán.',
+                    'son simulados y no se guardarán.',
                     style: TextStyle(
                       color: AppTheme.navyBlue,
                       fontWeight: FontWeight.bold,
@@ -214,33 +198,53 @@ class _InventoryMovementsSheetState
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  'Entradas',
-                  'Salidas',
-                  'Descartes',
-                ].map((section) {
-                  return ChoiceChip(
-                    label: Text(section),
-                    selected: _section == section,
-                    selectedColor: AppTheme.goldSoft,
-                    showCheckmark: false,
-                    onSelected: (selected) {
-                      if (!selected) return;
+                children:
+                    [
+                      'Entradas',
+                      'Salidas',
+                      'Descartes',
+                      if (!widget.isDemo) 'Historial',
+                    ].map((section) {
+                      return ChoiceChip(
+                        label: Text(section),
+                        selected: _section == section,
+                        selectedColor: AppTheme.goldSoft,
+                        showCheckmark: false,
+                        onSelected: (selected) {
+                          if (!selected) return;
 
-                      setState(() {
-                        _section = section;
-                        _selectedLotId = null;
-                        _quantityController.clear();
-                        _reasonController.clear();
-                      });
-                    },
-                  );
-                }).toList(),
+                          setState(() {
+                            _section = section;
+                            _selectedLotId = null;
+                            _quantityController.clear();
+                            _reasonController.clear();
+                          });
+                        },
+                      );
+                    }).toList(),
               ),
 
               const SizedBox(height: 18),
 
-              if (_section == 'Entradas') ...[
+              if (_section == 'Historial') ...[
+                if (widget.history.isEmpty)
+                  const Text(
+                    'No hay movimientos registrados en esta sucursal.',
+                  ),
+                ...widget.history.map(
+                  (m) => Card(
+                    child: ListTile(
+                      title: Text(
+                        '${m['tipo']} · Lote #${m['lote_id']} · ${m['cantidad']}',
+                      ),
+                      subtitle: Text(
+                        '${m['motivo']}\n${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(m['fecha_hora'] as String).toLocal())} · Saldo: ${m['cantidad_antes']} → ${m['cantidad_despues']}',
+                      ),
+                      isThreeLine: true,
+                    ),
+                  ),
+                ),
+              ] else if (_section == 'Entradas') ...[
                 const Text(
                   'Entradas de mercancía',
                   style: TextStyle(
@@ -254,17 +258,15 @@ class _InventoryMovementsSheetState
 
                 const Text(
                   'Las entradas se registran desde '
-                      'el botón "Agregar lote" de Inventario. '
-                      'Cada entrada debe crear un lote nuevo.',
+                  'el botón "Agregar lote" de Inventario. '
+                  'Cada entrada debe crear un lote nuevo.',
                 ),
 
                 const SizedBox(height: 12),
 
                 OutlinedButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Volver para agregar lote',
-                  ),
+                  child: const Text('Volver para agregar lote'),
                 ),
 
                 const SizedBox(height: 18),
@@ -281,33 +283,26 @@ class _InventoryMovementsSheetState
 
                 const Text(
                   'Esta lista muestra los lotes '
-                      'disponibles en pantalla, no un '
-                      'historial completo de movimientos.',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 12,
-                  ),
+                  'disponibles en pantalla, no un '
+                  'historial completo de movimientos.',
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
 
                 const SizedBox(height: 12),
 
                 if (widget.lots.isEmpty)
-                  const Text(
-                    'Todavía no hay lotes conectados.',
-                  ),
+                  const Text('Todavía no hay lotes conectados.'),
 
                 ...widget.lots.map(
-                      (lot) => Card(
+                  (lot) => Card(
                     child: ListTile(
-                      title: Text(
-                        '${lot.ingredientName} · Lote #${lot.id}',
-                      ),
+                      title: Text('${lot.ingredientName} · Lote #${lot.id}'),
                       subtitle: Text(
                         'Entrada: '
-                            '${DateFormat('dd/MM/yyyy').format(lot.entryDate)}\n'
-                            'Cantidad inicial: '
-                            '${formatInventoryQuantity(lot.initialQuantity)} '
-                            '${lot.unit} · ${lot.location}',
+                        '${DateFormat('dd/MM/yyyy').format(lot.entryDate)}\n'
+                        'Cantidad inicial: '
+                        '${formatInventoryQuantity(lot.initialQuantity)} '
+                        '${lot.unit} · ${lot.location}',
                       ),
                       isThreeLine: true,
                     ),
@@ -315,9 +310,7 @@ class _InventoryMovementsSheetState
                 ),
               ] else ...[
                 Text(
-                  isSalida
-                      ? 'Registrar salida'
-                      : 'Registrar descarte',
+                  isSalida ? 'Registrar salida' : 'Registrar descarte',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -330,11 +323,11 @@ class _InventoryMovementsSheetState
                 Text(
                   isSalida
                       ? 'Selecciona el lote del que se '
-                      'utilizará materia prima. '
-                      'Los lotes caducados no están '
-                      'disponibles para consumo.'
+                            'utilizará materia prima. '
+                            'Los lotes caducados no están '
+                            'disponibles para consumo.'
                       : 'Selecciona el lote que deseas '
-                      'descartar e indica el motivo.',
+                            'descartar e indica el motivo.',
                 ),
 
                 const SizedBox(height: 16),
@@ -345,8 +338,8 @@ class _InventoryMovementsSheetState
                       padding: EdgeInsets.all(20),
                       child: Text(
                         'No hay lotes disponibles para '
-                            'esta operación. Activa los datos '
-                            'simulados para probar la interfaz.',
+                        'esta operación. Activa los datos '
+                        'simulados para probar la interfaz.',
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -356,8 +349,7 @@ class _InventoryMovementsSheetState
                   Form(
                     key: _formKey,
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         DropdownButtonFormField<int>(
                           key: ValueKey(_section),
@@ -372,9 +364,9 @@ class _InventoryMovementsSheetState
                               value: lot.id,
                               child: Text(
                                 '${lot.ingredientName} '
-                                    '· #${lot.id} '
-                                    '· ${formatInventoryQuantity(lot.availableQuantity)} '
-                                    '${lot.unit}',
+                                '· #${lot.id} '
+                                '· ${formatInventoryQuantity(lot.availableQuantity)} '
+                                '${lot.unit}',
                                 overflow: TextOverflow.ellipsis,
                               ),
                             );
@@ -384,9 +376,8 @@ class _InventoryMovementsSheetState
                               _selectedLotId = value;
                             });
                           },
-                          validator: (value) => value == null
-                              ? 'Selecciona un lote.'
-                              : null,
+                          validator: (value) =>
+                              value == null ? 'Selecciona un lote.' : null,
                         ),
 
                         const SizedBox(height: 14),
@@ -394,20 +385,17 @@ class _InventoryMovementsSheetState
                         if (selectedLot != null)
                           Text(
                             'Disponible: '
-                                '${formatInventoryQuantity(selectedLot.availableQuantity)} '
-                                '${selectedLot.unit}\n'
-                                'Ubicación: ${selectedLot.location}',
-                            style: const TextStyle(
-                              color: AppTheme.navyBlue,
-                            ),
+                            '${formatInventoryQuantity(selectedLot.availableQuantity)} '
+                            '${selectedLot.unit}\n'
+                            'Ubicación: ${selectedLot.location}',
+                            style: const TextStyle(color: AppTheme.navyBlue),
                           ),
 
                         const SizedBox(height: 14),
 
                         TextFormField(
                           controller: _quantityController,
-                          keyboardType:
-                          const TextInputType.numberWithOptions(
+                          keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
                           decoration: InputDecoration(
@@ -417,8 +405,7 @@ class _InventoryMovementsSheetState
                             border: const OutlineInputBorder(),
                           ),
                           validator: (text) {
-                            final quantity =
-                            _parseQuantity(text ?? '');
+                            final quantity = _parseQuantity(text ?? '');
 
                             if (quantity == null ||
                                 !quantity.isFinite ||
@@ -426,6 +413,9 @@ class _InventoryMovementsSheetState
                               return 'Introduce una cantidad válida.';
                             }
 
+                            if (!validInventoryDecimal(quantity, 3)) {
+                              return 'Máximo 3 decimales.';
+                            }
                             if (maxAvailable != null &&
                                 quantity > maxAvailable) {
                               return 'Supera las existencias '
@@ -444,13 +434,11 @@ class _InventoryMovementsSheetState
                           maxLength: 180,
                           decoration: const InputDecoration(
                             labelText: 'Motivo',
-                            hintText:
-                            'Ej. Preparación de alimentos',
+                            hintText: 'Ej. Preparación de alimentos',
                             border: OutlineInputBorder(),
                           ),
                           validator: (text) =>
-                          (text == null ||
-                              text.trim().isEmpty)
+                              (text == null || text.trim().isEmpty)
                               ? 'Indica el motivo.'
                               : null,
                         ),
@@ -458,12 +446,9 @@ class _InventoryMovementsSheetState
                         const SizedBox(height: 16),
 
                         ElevatedButton(
-                          onPressed: () =>
-                              _validateMovement(selectedLot),
+                          onPressed: () => _validateMovement(selectedLot),
                           child: Text(
-                            isSalida
-                                ? 'Validar salida'
-                                : 'Validar descarte',
+                            isSalida ? 'Validar salida' : 'Validar descarte',
                           ),
                         ),
                       ],
@@ -474,13 +459,10 @@ class _InventoryMovementsSheetState
 
                 const Text(
                   'Versión de prueba: validar no '
-                      'descuenta existencias ni guarda '
-                      'movimientos en Supabase.',
+                  'descuenta existencias ni guarda '
+                  'movimientos en Supabase.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textMuted,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
                 ),
               ],
             ],

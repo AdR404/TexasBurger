@@ -99,7 +99,7 @@ class SalesService extends ChangeNotifier {
     String? deliveryAddress,
   }) => _serialize(() async {
     final newSale = Venta(
-      id: 'txs_${DateTime.now().microsecondsSinceEpoch}',
+      id: 'txs_${DateTime.now().microsecondsSinceEpoch}_${_lastTicketNumber + 1}',
       ticketNumber: _lastTicketNumber + 1,
       items: items
           .map(
@@ -133,16 +133,20 @@ class SalesService extends ChangeNotifier {
       deliveryAddress: deliveryAddress,
     );
 
+    await _remoteWriter(newSale);
     _lastTicketNumber = newSale.ticketNumber;
     _sales.insert(0, newSale);
     try {
       await _save();
     } catch (_) {
+      if (DbService.onlineSalesEnabled && DbService.isSyncEnabled) {
+        notifyListeners();
+        throw StateError('Venta registrada en Supabase, pero falló el historial local. No repitas el cobro.');
+      }
       _sales.removeWhere((sale) => sale.id == newSale.id);
       rethrow;
     }
     notifyListeners();
-    await _remoteWriter(newSale);
     return newSale;
   });
 

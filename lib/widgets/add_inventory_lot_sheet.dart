@@ -1,14 +1,15 @@
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/ingredient_catalog.dart';
+import '../services/inventory_repository.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 
 // Datos validados de una nueva entrada.
 // Todavía no se guardan en Supabase.
 class InventoryLotDraft {
+  final int? ingredientId;
   final String ingredientName;
   final double quantity;
   final String unit;
@@ -19,6 +20,7 @@ class InventoryLotDraft {
   final bool estimatedExpiration;
 
   const InventoryLotDraft({
+    this.ingredientId,
     required this.ingredientName,
     required this.quantity,
     required this.unit,
@@ -31,27 +33,27 @@ class InventoryLotDraft {
 }
 
 Future<InventoryLotDraft?> showAddInventoryLotSheet(
-    BuildContext context,
-    ) {
+  BuildContext context, {
+  List<InventoryIngredient>? ingredients,
+}) {
   return showModalBottomSheet<InventoryLotDraft>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => const _AddInventoryLotSheet(),
+    builder: (_) => _AddInventoryLotSheet(ingredients: ingredients),
   );
 }
 
 class _AddInventoryLotSheet extends StatefulWidget {
-  const _AddInventoryLotSheet();
+  const _AddInventoryLotSheet({this.ingredients});
+  final List<InventoryIngredient>? ingredients;
 
   @override
-  State<_AddInventoryLotSheet> createState() =>
-      _AddInventoryLotSheetState();
+  State<_AddInventoryLotSheet> createState() => _AddInventoryLotSheetState();
 }
 
-class _AddInventoryLotSheetState
-    extends State<_AddInventoryLotSheet> {
+class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
   final _formKey = GlobalKey<FormState>();
 
   final _quantityController = TextEditingController();
@@ -76,9 +78,7 @@ class _AddInventoryLotSheetState
   void initState() {
     super.initState();
 
-    _entryController = TextEditingController(
-      text: _formatDate(_entryDate),
-    );
+    _entryController = TextEditingController(text: _formatDate(_entryDate));
   }
 
   @override
@@ -91,9 +91,7 @@ class _AddInventoryLotSheetState
   }
 
   double? _parseNumber(String text) {
-    return double.tryParse(
-      text.trim().replaceAll(',', '.'),
-    );
+    return double.tryParse(text.trim().replaceAll(',', '.'));
   }
 
   String? _validatePositive(String? text) {
@@ -106,17 +104,11 @@ class _AddInventoryLotSheetState
     return null;
   }
 
-  Future<void> _selectDate({
-    required bool expiration,
-  }) async {
+  Future<void> _selectDate({required bool expiration}) async {
     final selected = await showDatePicker(
       context: context,
-      initialDate: expiration
-          ? (_expirationDate ?? _entryDate)
-          : _entryDate,
-      firstDate: expiration
-          ? _entryDate
-          : DateTime(2020),
+      initialDate: expiration ? (_expirationDate ?? _entryDate) : _entryDate,
+      firstDate: expiration ? _entryDate : DateTime(2020),
       lastDate: DateTime(2100),
     );
 
@@ -130,8 +122,7 @@ class _AddInventoryLotSheetState
         _entryDate = selected;
         _entryController.text = _formatDate(selected);
 
-        if (_expirationDate != null &&
-            _expirationDate!.isBefore(_entryDate)) {
+        if (_expirationDate != null && _expirationDate!.isBefore(_entryDate)) {
           _expirationDate = null;
           _expirationController.clear();
         }
@@ -142,9 +133,7 @@ class _AddInventoryLotSheetState
   void _validateDraft() {
     if (!UserRoleService().isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Acceso exclusivo para administradores.'),
-        ),
+        const SnackBar(content: Text('Acceso exclusivo para administradores.')),
       );
       return;
     }
@@ -152,7 +141,12 @@ class _AddInventoryLotSheetState
     if (!_formKey.currentState!.validate()) return;
 
     final draft = InventoryLotDraft(
-      ingredientName: _ingredient!,
+      ingredientId: widget.ingredients == null ? null : int.parse(_ingredient!),
+      ingredientName: widget.ingredients == null
+          ? _ingredient!
+          : widget.ingredients!
+                .firstWhere((i) => i.id.toString() == _ingredient)
+                .name,
       quantity: _parseNumber(_quantityController.text)!,
       unit: _unit,
       location: _location,
@@ -168,9 +162,7 @@ class _AddInventoryLotSheetState
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         child: Form(
@@ -190,34 +182,50 @@ class _AddInventoryLotSheetState
 
               const SizedBox(height: 8),
 
-              const Text(
-                'Registra una entrada de materia prima.',
-              ),
+              const Text('Registra una entrada de materia prima.'),
 
               const SizedBox(height: 20),
 
               DropdownButtonFormField<String>(
+                key: const ValueKey('inventory-ingredient'),
                 initialValue: _ingredient,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Ingrediente',
                   border: OutlineInputBorder(),
                 ),
-                items: IngredientCatalog.defaultIngredients.map(
-                      (ingredient) => DropdownMenuItem(
-                    value: ingredient,
-                    child: Text(
-                      ingredient,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ).toList(),
+                items: widget.ingredients == null
+                    ? IngredientCatalog.defaultIngredients
+                          .map(
+                            (name) => DropdownMenuItem(
+                              value: name,
+                              child: Text(name),
+                            ),
+                          )
+                          .toList()
+                    : widget.ingredients!
+                          .map(
+                            (i) => DropdownMenuItem(
+                              value: i.id.toString(),
+                              child: Text(
+                                i.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
                 onChanged: (value) {
-                  setState(() => _ingredient = value);
+                  setState(() {
+                    _ingredient = value;
+                    if (widget.ingredients != null && value != null) {
+                      _unit = widget.ingredients!
+                          .firstWhere((i) => i.id.toString() == value)
+                          .unit;
+                    }
+                  });
                 },
-                validator: (value) => value == null
-                    ? 'Selecciona un ingrediente.'
-                    : null,
+                validator: (value) =>
+                    value == null ? 'Selecciona un ingrediente.' : null,
               ),
 
               const SizedBox(height: 14),
@@ -227,38 +235,49 @@ class _AddInventoryLotSheetState
                   Expanded(
                     child: TextFormField(
                       controller: _quantityController,
-                      keyboardType:
-                      const TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Cantidad',
                         border: OutlineInputBorder(),
                       ),
-                      validator: _validatePositive,
+                      validator: (text) {
+                        final error = _validatePositive(text);
+                        if (error != null) return error;
+                        return validInventoryDecimal(_parseNumber(text!)!, 3)
+                            ? null
+                            : 'Máximo 3 decimales.';
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      key: ValueKey(_unit),
                       initialValue: _unit,
                       decoration: const InputDecoration(
                         labelText: 'Unidad',
                         border: OutlineInputBorder(),
                       ),
-                      items: ['kg', 'g', 'pzas', 'L', 'ml']
-                          .map(
-                            (unit) => DropdownMenuItem(
-                          value: unit,
-                          child: Text(unit),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _unit = value);
-                        }
-                      },
+                      items:
+                          (widget.ingredients == null
+                                  ? ['kg', 'g', 'pzas', 'L', 'ml']
+                                  : [_unit])
+                              .map(
+                                (unit) => DropdownMenuItem(
+                                  value: unit,
+                                  child: Text(unit),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: widget.ingredients != null
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _unit = value);
+                              }
+                            },
                     ),
                   ),
                 ],
@@ -273,10 +292,7 @@ class _AddInventoryLotSheetState
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Almacén',
-                    child: Text('Almacén'),
-                  ),
+                  DropdownMenuItem(value: 'Almacén', child: Text('Almacén')),
                   DropdownMenuItem(
                     value: 'Refrigerador',
                     child: Text('Refrigerador'),
@@ -293,8 +309,7 @@ class _AddInventoryLotSheetState
 
               TextFormField(
                 controller: _costController,
-                keyboardType:
-                const TextInputType.numberWithOptions(
+                keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 decoration: const InputDecoration(
@@ -302,7 +317,18 @@ class _AddInventoryLotSheetState
                   prefixText: '\$ ',
                   border: OutlineInputBorder(),
                 ),
-                validator: _validatePositive,
+                validator: (text) {
+                  final number = _parseNumber(text ?? '');
+                  if (number == null ||
+                      !number.isFinite ||
+                      number < 0 ||
+                      number >= 100000000) {
+                    return 'Introduce un costo válido (0 o mayor).';
+                  }
+                  return validInventoryDecimal(number, 4)
+                      ? null
+                      : 'Máximo 4 decimales.';
+                },
               ),
 
               const SizedBox(height: 14),
@@ -336,9 +362,7 @@ class _AddInventoryLotSheetState
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Caducidad aproximada'),
-                subtitle: const Text(
-                  'Activa si la fecha es una estimación.',
-                ),
+                subtitle: const Text('Activa si la fecha es una estimación.'),
                 value: _estimatedExpiration,
                 onChanged: (value) {
                   setState(() {
@@ -361,7 +385,11 @@ class _AddInventoryLotSheetState
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _validateDraft,
-                      child: const Text('Validar datos'),
+                      child: Text(
+                        widget.ingredients == null
+                            ? 'Validar datos'
+                            : 'Registrar lote',
+                      ),
                     ),
                   ),
                 ],
@@ -371,12 +399,9 @@ class _AddInventoryLotSheetState
 
               const Text(
                 'Versión de prueba: los datos todavía '
-                    'no se guardarán en la base de datos.',
+                'no se guardarán en la base de datos.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textMuted,
-                ),
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
             ],
           ),

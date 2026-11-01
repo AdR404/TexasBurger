@@ -5,9 +5,15 @@ import '../theme/app_theme.dart';
 
 /// Remote identity never changes UserRoleService or unlocks local admin tools.
 class OperatorAccessCard extends StatelessWidget {
-  const OperatorAccessCard({super.key, this.session, this.environmentLabel});
+  const OperatorAccessCard({
+    super.key,
+    this.session,
+    this.environmentLabel,
+    this.contextMessage,
+  });
   final OperatorSession? session;
   final String? environmentLabel;
+  final String? contextMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +25,7 @@ class OperatorAccessCard extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'Modo local de demostración. Acceso remoto no disponible; ventas conservadas en el dispositivo.',
+            'Sesión remota no disponible. El inventario requiere iniciar sesión; consulta el estado de ventas en Configuración.',
           ),
         ),
       );
@@ -28,7 +34,7 @@ class OperatorAccessCard extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final status = switch (controller.state) {
-          OperatorState.local => 'Modo local de demostración',
+          OperatorState.local => 'Sin sesión remota de inventario',
           OperatorState.authenticated =>
             controller.authenticated
                 ? 'Cuenta autenticada mediante Supabase'
@@ -61,8 +67,9 @@ class OperatorAccessCard extends StatelessWidget {
                   ),
                 if (controller.message != null) Text(controller.message!),
                 const SizedBox(height: 8),
-                const Text(
-                  'Guardado online no disponible. Las ventas actuales son registros locales, sin confirmación de Supabase. Iniciar sesión no habilita el envío.',
+                Text(
+                  contextMessage ??
+                      'Esta sesión permite acceder al inventario según los permisos de la cuenta. Las ventas dependen de la opción de guardado remoto y de la configuración de esta compilación.',
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -90,7 +97,7 @@ class OperatorAccessCard extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: controller.busy ? null : controller.signOut,
-                        child: const Text('Cerrar sesión / modo local'),
+                        child: const Text('Cerrar sesión remota'),
                       ),
                     ],
                   ],

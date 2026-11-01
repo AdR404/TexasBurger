@@ -29,6 +29,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   String _searchQuery = '';
   final List<VentaItem> _cartItems = [];
   String? _couponCode;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -131,6 +132,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   }
 
   Future<void> _openCartBottomSheet() async {
+    if (_saving) return;
     if (_cartItems.isEmpty) return;
     final caja = CajaService();
     if (caja.saleContext == null) {
@@ -181,7 +183,10 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
           customerPhone,
           deliveryAddress,
         }) async {
+          if (_saving) return;
+          _saving = true;
           Navigator.pop(ctx);
+          try {
           final sale = await _salesService.registerSale(
             saleContext: saleContext,
             items: _cartItems,
@@ -208,6 +213,13 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
               context: context,
               builder: (dCtx) => TicketDialog(venta: sale),
             );
+          }
+          } catch (error) {
+            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(error is StateError ? error.message.toString() : 'No se pudo completar la venta. Revisa BD antes de repetir el cobro.'),
+              duration: const Duration(seconds: 12))); }
+          } finally {
+            _saving = false;
           }
         },
       ),

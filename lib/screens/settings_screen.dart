@@ -592,14 +592,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         title: Text(
                           DbService.isSyncEnabled
-                              ? 'Preferencia de guardado remoto activa'
-                              : 'Base de datos frenada (modo local)',
+                              ? 'Preferencia de ventas remotas activa'
+                              : 'Ventas en modo local',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          DbService.isSyncEnabled
-                              ? 'El guardado online aún no está implementado. Esta preferencia no habilita envíos ni programa ventas futuras.'
-                              : 'El envío a Supabase está pausado. Todo se guarda únicamente en el dispositivo.',
+                          DbService.salesModeMessage,
                         ),
                         value: DbService.isSyncEnabled,
                         activeThumbColor: Colors.green.shade700,
@@ -621,9 +619,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           scaffold.showSnackBar(
                             SnackBar(
                               content: Text(
-                                val
-                                    ? 'Preferencia guardada. El guardado online sigue sin implementar.'
-                                    : 'Base de datos frenada. Trabajando en modo local.',
+                                DbService.salesModeMessage,
                               ),
                             ),
                           );
@@ -738,16 +734,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
                         title: const Text('Cargar ventas de demostración'),
-                        subtitle: const Text('Genera ventas de ejemplo para visualizar el panel'),
+                        subtitle: const Text('Deshabilitado para no mezclar ejemplos con el historial y la caja reales.'),
                         trailing: ElevatedButton(
-                          onPressed: () async {
-                            if (!_roleService.isAdmin) return;
-                            final scaffold = ScaffoldMessenger.of(context);
-                            await _salesService.loadSampleSales(_productService.products);
-                            scaffold.showSnackBar(
-                              const SnackBar(content: Text('¡Ventas de ejemplo cargadas! Revisa el panel.')),
-                            );
-                          },
+                          onPressed: null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.navyBlue,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

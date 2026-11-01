@@ -14,8 +14,8 @@ class DbService {
 
   static SupabaseClient get _db => Supabase.instance.client;
 
-  // The new online writer is not implemented. No UI preference enables writes.
-  static const bool onlineSalesEnabled = false;
+  // Build flag plus the saved preference enable the simple online writer.
+  static const bool onlineSalesEnabled = bool.fromEnvironment('TEXAS_ENABLE_SIMPLE_SALES');
   static SupabaseEnvironment? environment;
   static OperatorSession? session;
   static OperatorAuthService get operatorAuth => OperatorAuthService(_db);
@@ -25,10 +25,16 @@ class DbService {
   );
   static final ValueNotifier<String> lastSyncStatusNotifier =
       ValueNotifier<String>(
-        'Guardado online no disponible; registro solo local',
+        'Conexión pendiente de comprobar',
       );
 
   static bool get isSyncEnabled => syncEnabledNotifier.value;
+
+  static String get salesModeMessage => !isSyncEnabled
+      ? 'Ventas solo en el dispositivo. No se enviarán automáticamente después. El inventario remoto requiere su propia sesión y permisos.'
+      : onlineSalesEnabled
+          ? 'Ventas online habilitadas. Cada venta requiere confirmar cabecera y detalles en Supabase. La conexión aún debe comprobarse.'
+          : 'Esta compilación guarda ventas solo en el dispositivo; no incluye la opción de ventas online.';
 
   static Future<void> setSyncEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,9 +42,7 @@ class DbService {
       throw StateError('No se pudo guardar la preferencia de sincronización.');
     }
     syncEnabledNotifier.value = enabled;
-    lastSyncStatusNotifier.value = enabled
-        ? 'Preferencia guardada; el guardado online sigue sin implementar'
-        : 'Base de datos frenada (modo solo local)';
+    lastSyncStatusNotifier.value = salesModeMessage;
   }
 
   static Future<void> init() async {
@@ -46,9 +50,7 @@ class DbService {
       final prefs = await SharedPreferences.getInstance();
       final enabled = prefs.getBool(_syncPrefKey) ?? true;
       syncEnabledNotifier.value = enabled;
-      lastSyncStatusNotifier.value = enabled
-          ? 'Preferencia guardada; conexión pendiente de comprobar. Guardado online no disponible'
-          : 'Base de datos frenada (modo solo local)';
+      lastSyncStatusNotifier.value = '$salesModeMessage Conexión pendiente de comprobar.';
     } catch (_) {
       // Never resume remote writes if the saved preference could not be read.
       syncEnabledNotifier.value = false;
@@ -81,12 +83,75 @@ class DbService {
     }
   }
 
-  // Compatibility notification for the local history. No network writes,
-  // retries or server acknowledgement are performed here.
-  static Future<void> guardarVenta(Venta venta) async {
-    lastSyncStatusNotifier.value = !isSyncEnabled
-        ? 'BD frenada: Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota'
-        : 'Ticket #${venta.ticketNumber} guardado solo en dispositivo. Guardado online no disponible; sin confirmación remota';
+  // Explicit opt-in for an authorized test build. No RPC or automatic retries.
+  static Future<void> guardarVenta(Venta venta, {SupabaseClient? client, bool? enabled}) async {
+    if (!(enabled ?? onlineSalesEnabled) || !isSyncEnabled) {
+      lastSyncStatusNotifier.value = 'Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota';
+      return;
+    }
+    final db = client ?? _db;
+    int? remoteId;
+    bool headerSent = false;
+    try {
+      final context = venta.saleContext;
+      if (context == null || venta.items.isEmpty || venta.iva == null ||
+          venta.ivaRate != 0.16 || venta.ivaIncluded != true) {
+        throw StateError('Faltan contexto, productos o desglose fiscal.');
+      }
+      final employee = await db.from('empleados_pos').select('usuario_id')
+          .eq('id', context.employeeId).eq('activo', true).single().retry(enabled: false);
+      final userId = employee['usuario_id'];
+      // Demo employees may have no user; ventas.usuario_id is nullable.
+      // The active employee lookup above remains mandatory in both cases.
+      if (userId != null) {
+        if (userId is! int) throw StateError('El usuario asociado al empleado no es válido.');
+        await db.from('usuarios').select('id').eq('id', userId)
+            .eq('activo', true).single().retry(enabled: false);
+      }
+      // This association identifies the record; it is NOT authentication or authorization.
+      final details = <Map<String, dynamic>>[];
+      for (final item in venta.items) {
+        final products = await db.from('productos').select('id')
+            .eq('nombre', item.product.name).eq('activo', true).retry(enabled: false);
+        if (products.length != 1 || products.single['id'] is! int ||
+            item.quantity <= 0 || !item.unitPrice.isFinite || item.unitPrice < 0) {
+          throw StateError('Producto sin correspondencia única válida: ${item.product.name}');
+        }
+        details.add({'producto_id': products.single['id'], 'cantidad': item.quantity,
+          'precio_unitario': item.unitPrice});
+      }
+      headerSent = true;
+      final header = await db.from('ventas').insert({
+        'usuario_id': userId, 'fecha_hora': venta.timestamp.toIso8601String(),
+        'total': venta.total, 'metodo_pago': venta.paymentMethod,
+        'subtotal': venta.subtotal, 'descuento': venta.discount,
+        'codigo_descuento': venta.discountCode, 'iva': venta.iva,
+        'tasa_iva': venta.ivaRate, 'iva_incluido': venta.ivaIncluded,
+        'empresa_id': context.companyId, 'empresa_nombre': context.companyName,
+        'sucursal_id': context.branchId, 'sucursal_nombre': context.branchName,
+        'empleado_pos_id': context.employeeId, 'empleado_nombre': context.employeeName,
+      }).select('id').single().retry(enabled: false);
+      remoteId = header['id'] as int;
+      for (final detail in details) { detail['venta_id'] = remoteId; }
+      await db.from('detalle_venta').insert(details).retry(enabled: false);
+      final stored = await db.from('detalle_venta')
+          .select('producto_id,cantidad,precio_unitario').eq('venta_id', remoteId).retry(enabled: false);
+      final remaining = List<Map<String, dynamic>>.from(stored);
+      for (final detail in details) {
+        final index = remaining.indexWhere((row) => row['producto_id'] == detail['producto_id'] &&
+          row['cantidad'] == detail['cantidad'] && row['precio_unitario'] == detail['precio_unitario']);
+        if (index < 0) throw StateError('No se verificaron todos los detalles.');
+        remaining.removeAt(index);
+      }
+      if (remaining.isNotEmpty) throw StateError('Hay detalles adicionales inesperados.');
+      lastSyncStatusNotifier.value = 'Venta completa en Supabase: $remoteId';
+    } catch (error) {
+      final message = headerSent
+          ? 'Venta no confirmada como completa (ID: ${remoteId ?? "desconocido"}). Puede existir una cabecera o un registro parcial. No repitas el cobro sin revisar BD.'
+          : 'No se envió la venta. Revisa la correspondencia de productos, el usuario del empleado y los permisos. ${error is StateError ? error.message : "No se pudo consultar Supabase."}';
+      lastSyncStatusNotifier.value = message;
+      throw StateError(message);
+    }
   }
 
   static Future<String> probarConexion() async {
@@ -105,7 +170,7 @@ class DbService {
 
       final estadoModo = isSyncEnabled ? 'ACTIVA' : 'PAUSADA (Local)';
       final msg = errorStaff == null
-          ? 'Lectura OK ($estadoModo). Escritura no comprobada; guardado online no disponible'
+          ? 'Lectura OK ($estadoModo). Escritura no comprobada por esta prueba.'
           : 'Lectura parcial ($estadoModo). Error en sucursales/empleados: $errorStaff';
       lastSyncStatusNotifier.value =
           '$msg (muestra máxima de 1 fila por tabla: ventas ${ventas.length}, '

@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/venta.dart';
+import 'operator_auth_service.dart';
+import 'supabase_environment.dart';
+import 'operator_session.dart';
 
 const supabaseUrl = 'https://zlljyvowdripxdgvhilz.supabase.co';
 const supabaseKey = 'sb_publishable_QagT6TuxktFz4DgItZ6aEQ_jRv0DbUO';
@@ -11,22 +14,30 @@ class DbService {
 
   static SupabaseClient get _db => Supabase.instance.client;
 
-  static final Map<String, int> _productIds = {};
-  static final Map<String, int> _categoryIds = {};
+  // The new online writer is not implemented. No UI preference enables writes.
+  static const bool onlineSalesEnabled = false;
+  static SupabaseEnvironment? environment;
+  static OperatorSession? session;
+  static OperatorAuthService get operatorAuth => OperatorAuthService(_db);
 
-  static final ValueNotifier<bool> syncEnabledNotifier = ValueNotifier<bool>(true);
-  static final ValueNotifier<String> lastSyncStatusNotifier = ValueNotifier<String>(
-    'Sincronización activa',
+  static final ValueNotifier<bool> syncEnabledNotifier = ValueNotifier<bool>(
+    true,
   );
+  static final ValueNotifier<String> lastSyncStatusNotifier =
+      ValueNotifier<String>(
+        'Guardado online no disponible; registro solo local',
+      );
 
   static bool get isSyncEnabled => syncEnabledNotifier.value;
 
   static Future<void> setSyncEnabled(bool enabled) async {
-    syncEnabledNotifier.value = enabled;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_syncPrefKey, enabled);
+    if (!await prefs.setBool(_syncPrefKey, enabled)) {
+      throw StateError('No se pudo guardar la preferencia de sincronización.');
+    }
+    syncEnabledNotifier.value = enabled;
     lastSyncStatusNotifier.value = enabled
-        ? 'Sincronización con Supabase reanudada'
+        ? 'Preferencia guardada; el guardado online sigue sin implementar'
         : 'Base de datos frenada (modo solo local)';
   }
 
@@ -36,148 +47,46 @@ class DbService {
       final enabled = prefs.getBool(_syncPrefKey) ?? true;
       syncEnabledNotifier.value = enabled;
       lastSyncStatusNotifier.value = enabled
-          ? 'Conectado a Supabase'
+          ? 'Preferencia guardada; conexión pendiente de comprobar. Guardado online no disponible'
           : 'Base de datos frenada (modo solo local)';
-    } catch (_) {}
+    } catch (_) {
+      // Never resume remote writes if the saved preference could not be read.
+      syncEnabledNotifier.value = false;
+      lastSyncStatusNotifier.value =
+          'No se pudo leer la configuración de BD; envío remoto pausado';
+    }
 
     try {
-      await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
-    } catch (e) {
-      debugPrint('No se pudo conectar a la BD: $e');
-      lastSyncStatusNotifier.value = 'Error al inicializar Supabase: $e';
+      environment = SupabaseEnvironment.resolve(mainPublicKey: supabaseKey);
+      await Supabase.initialize(
+        url: environment!.url,
+        publishableKey: environment!.publicKey,
+        authOptions: const FlutterAuthClientOptions(
+          persistSession: true,
+          detectSessionInUri: false,
+        ),
+      );
+      session?.dispose();
+      session = OperatorSession(
+        operatorAuth,
+        await SharedPreferences.getInstance(),
+        projectId: environment!.projectId,
+      );
+      await session!.initialize();
+    } catch (_) {
+      session?.dispose();
+      session = null;
+      lastSyncStatusNotifier.value =
+          'Acceso remoto no disponible o configuración inválida; trabajo local y envío bloqueado';
     }
   }
 
-  static Future<int> _categoryId(String nombre) async {
-    if (_categoryIds.containsKey(nombre)) return _categoryIds[nombre]!;
-
-    final existing = await _db
-        .from('categorias')
-        .select('id')
-        .eq('nombre', nombre)
-        .limit(1);
-    if (existing.isNotEmpty) {
-      _categoryIds[nombre] = existing.first['id'] as int;
-      return _categoryIds[nombre]!;
-    }
-
-    final row = await _db
-        .from('categorias')
-        .insert({'nombre': nombre})
-        .select('id')
-        .single();
-    _categoryIds[nombre] = row['id'] as int;
-    return _categoryIds[nombre]!;
-  }
-
-  static Future<int> _productId(
-    String nombre,
-    String categoria,
-    double precio,
-    String descripcion,
-  ) async {
-    if (_productIds.containsKey(nombre)) return _productIds[nombre]!;
-
-    final existing = await _db
-        .from('productos')
-        .select('id')
-        .eq('nombre', nombre)
-        .limit(1);
-    if (existing.isNotEmpty) {
-      _productIds[nombre] = existing.first['id'] as int;
-      return _productIds[nombre]!;
-    }
-
-    final catId = await _categoryId(categoria);
-    final row = await _db
-        .from('productos')
-        .insert({
-          'nombre': nombre,
-          'categoria_id': catId,
-          'precio': precio,
-          'descripcion': descripcion,
-        })
-        .select('id')
-        .single();
-    _productIds[nombre] = row['id'] as int;
-    return _productIds[nombre]!;
-  }
-
-  static Future<Map<String, dynamic>> _insertVentaHeader(Venta venta) async {
-    final basePayload = <String, dynamic>{
-      'usuario_id': 2,
-      'fecha_hora': venta.timestamp.toIso8601String(),
-      'total': venta.total,
-      'metodo_pago': venta.paymentMethod,
-    };
-
-    final extendedPayload = <String, dynamic>{
-      ...basePayload,
-      'subtotal': venta.subtotal,
-      'descuento': venta.discount,
-      if (venta.discountCode != null) 'codigo_descuento': venta.discountCode,
-      if (venta.iva != null) 'iva': venta.iva,
-      if (venta.ivaRate != null) 'tasa_iva': venta.ivaRate,
-      if (venta.ivaIncluded != null) 'iva_incluido': venta.ivaIncluded,
-      if (venta.saleContext != null) ...{
-        'empresa_id': venta.saleContext!.companyId,
-        'empresa_nombre': venta.saleContext!.companyName,
-        'sucursal_id': venta.saleContext!.branchId,
-        'sucursal_nombre': venta.saleContext!.branchName,
-        'empleado_pos_id': venta.saleContext!.employeeId,
-        'empleado_nombre': venta.saleContext!.employeeName,
-      },
-    };
-
-    try {
-      return await _db
-          .from('ventas')
-          .insert(extendedPayload)
-          .select('id')
-          .single();
-    } on PostgrestException {
-      return await _db.from('ventas').insert(basePayload).select('id').single();
-    }
-  }
-
+  // Compatibility notification for the local history. No network writes,
+  // retries or server acknowledgement are performed here.
   static Future<void> guardarVenta(Venta venta) async {
-    if (!isSyncEnabled) {
-      lastSyncStatusNotifier.value =
-          'BD frenada: Ticket #${venta.ticketNumber} guardado solo en dispositivo';
-      return;
-    }
-
-    try {
-      final row = await _insertVentaHeader(venta);
-      final ventaId = row['id'] as int;
-      final detalle = <Map<String, dynamic>>[];
-
-      for (final item in venta.items) {
-        final p = item.product;
-        final prodId = await _productId(
-          p.name,
-          p.category,
-          p.price,
-          p.description,
-        );
-        detalle.add({
-          'venta_id': ventaId,
-          'producto_id': prodId,
-          'cantidad': item.quantity,
-          'precio_unitario': item.unitPrice,
-        });
-      }
-
-      if (detalle.isNotEmpty) {
-        await _db.from('detalle_venta').insert(detalle);
-      }
-      lastSyncStatusNotifier.value =
-          'Ticket #${venta.ticketNumber} guardado en Supabase (ID remoto: $ventaId)';
-    } catch (e) {
-      debugPrint('No se pudo guardar la venta en la BD: $e');
-      lastSyncStatusNotifier.value =
-          'Error al sincronizar Ticket #${venta.ticketNumber}: $e';
-    }
+    lastSyncStatusNotifier.value = !isSyncEnabled
+        ? 'BD frenada: Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota'
+        : 'Ticket #${venta.ticketNumber} guardado solo en dispositivo. Guardado online no disponible; sin confirmación remota';
   }
 
   static Future<String> probarConexion() async {
@@ -186,20 +95,21 @@ class DbService {
       final detalles = await _db.from('detalle_venta').select('id').limit(1);
       final productos = await _db.from('productos').select('id').limit(1);
 
-      bool tieneContextoStaff = true;
+      String? errorStaff;
       try {
         await _db.from('sucursales').select('id').limit(1);
         await _db.from('empleados_pos').select('id').limit(1);
-      } catch (_) {
-        tieneContextoStaff = false;
+      } catch (e) {
+        errorStaff = '$e';
       }
 
       final estadoModo = isSyncEnabled ? 'ACTIVA' : 'PAUSADA (Local)';
-      final msg = tieneContextoStaff
-          ? 'Conexión OK ($estadoModo) - Tablas listas'
-          : 'Conexión OK ($estadoModo) - Esquema base';
+      final msg = errorStaff == null
+          ? 'Lectura OK ($estadoModo). Escritura no comprobada; guardado online no disponible'
+          : 'Lectura parcial ($estadoModo). Error en sucursales/empleados: $errorStaff';
       lastSyncStatusNotifier.value =
-          '$msg (ventas: ${ventas.length}, prod: ${productos.length}, det: ${detalles.length})';
+          '$msg (muestra máxima de 1 fila por tabla: ventas ${ventas.length}, '
+          'productos ${productos.length}, detalles ${detalles.length})';
       return msg;
     } catch (e) {
       final err = 'Error de conexión con Supabase: $e';

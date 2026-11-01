@@ -156,8 +156,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Controla tus insumos, lotes y fechas de caducidad. '
-                      'Cada nueva entrada sumará existencias.',
+                  'Consulta y valida insumos, lotes y fechas de caducidad. '
+                      'En esta fase las entradas no se guardan ni suman existencias.',
                   style: TextStyle(
                     color: AppTheme.navyBlue,
                   ),
@@ -412,7 +412,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       Text(
                         '${ingredientLots.length} lote(s) '
                             '· $locations\n'
-                            'Existencia registrada: '
+                            '${_demoMode ? 'Existencia simulada' : 'Existencia registrada'}: '
                             '${inventoryAvailableText(ingredientLots)}',
                         style: const TextStyle(
                           color: AppTheme.textMuted,
@@ -449,6 +449,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       builder: (_) => InventoryLotDetailSheet(
                         ingredientName: ingredient,
                         lots: ingredientLots,
+                        isDemo: _demoMode,
                       ),
                     );
                   },

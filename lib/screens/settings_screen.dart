@@ -8,6 +8,7 @@ import '../models/producto.dart';
 import '../widgets/admin_access.dart';
 import '../widgets/discount_codes_dialog.dart';
 import '../widgets/product_thumbnail.dart';
+import '../widgets/operator_access_card.dart';
 import 'inventory_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -304,6 +305,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Banner de Rol Activo
+            const OperatorAccessCard(),
+            const SizedBox(height: 16),
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -589,13 +592,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         title: Text(
                           DbService.isSyncEnabled
-                              ? 'Sincronización con BD activa'
+                              ? 'Preferencia de guardado remoto activa'
                               : 'Base de datos frenada (modo local)',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
                           DbService.isSyncEnabled
-                              ? 'Las nuevas ventas y sus detalles se guardan automáticamente en Supabase.'
+                              ? 'El guardado online aún no está implementado. Esta preferencia no habilita envíos ni programa ventas futuras.'
                               : 'El envío a Supabase está pausado. Todo se guarda únicamente en el dispositivo.',
                         ),
                         value: DbService.isSyncEnabled,
@@ -603,12 +606,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: (val) async {
                           if (!_roleService.isAdmin) return;
                           final scaffold = ScaffoldMessenger.of(context);
-                          await DbService.setSyncEnabled(val);
+                          try {
+                            await DbService.setSyncEnabled(val);
+                          } catch (_) {
+                            if (!mounted) return;
+                            scaffold.showSnackBar(
+                              const SnackBar(content: Text(
+                                'No se pudo guardar el cambio. Se conserva el modo anterior.',
+                              )),
+                            );
+                            return;
+                          }
+                          if (!mounted) return;
                           scaffold.showSnackBar(
                             SnackBar(
                               content: Text(
                                 val
-                                    ? 'Sincronización con Supabase activada.'
+                                    ? 'Preferencia guardada. El guardado online sigue sin implementar.'
                                     : 'Base de datos frenada. Trabajando en modo local.',
                               ),
                             ),

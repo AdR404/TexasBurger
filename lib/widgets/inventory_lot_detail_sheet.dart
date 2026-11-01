@@ -9,11 +9,13 @@ import 'inventory_expiry_badge.dart';
 class InventoryLotDetailSheet extends StatelessWidget {
   final String ingredientName;
   final List<InventoryLot> lots;
+  final bool isDemo;
 
   const InventoryLotDetailSheet({
     super.key,
     required this.ingredientName,
     required this.lots,
+    this.isDemo = false,
   });
 
   String _date(DateTime value) {
@@ -42,6 +44,12 @@ class InventoryLotDetailSheet extends StatelessWidget {
             ),
 
             const SizedBox(height: 6),
+
+            if (isDemo)
+              const Text(
+                'MODO DEMOSTRACIÓN: existencias simuladas.',
+                style: TextStyle(color: AppTheme.goldDark, fontWeight: FontWeight.bold),
+              ),
 
             Text(
               ingredientName,

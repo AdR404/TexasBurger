@@ -30,6 +30,34 @@ class DbService {
 
   static bool get isSyncEnabled => syncEnabledNotifier.value;
 
+  // Read-only history. Keep nullable snapshots separate from local Venta defaults.
+  static Future<List<Map<String, dynamic>>> consultarHistorial({
+    int page = 0,
+    String? branchId,
+    DateTime? date,
+  }) async {
+    if (page < 0) throw ArgumentError.value(page, 'page');
+    var query = _db.from('ventas').select(
+      'id,fecha_hora,total,metodo_pago,empresa_id,empresa_nombre,'
+      'sucursal_id,sucursal_nombre,empleado_pos_id,empleado_nombre,'
+      'subtotal,descuento,codigo_descuento,iva,tasa_iva,iva_incluido,'
+      'detalle_venta(id,producto_id,cantidad,precio_unitario,productos(nombre))',
+    ).eq('empresa_id', 'texas_burger');
+    if (branchId != null) query = query.eq('sucursal_id', branchId);
+    if (date != null) {
+      final start = DateTime(date.year, date.month, date.day);
+      final end = DateTime(date.year, date.month, date.day + 1);
+      query = query.gte('fecha_hora', start.toUtc().toIso8601String())
+          .lt('fecha_hora', end.toUtc().toIso8601String());
+    }
+    return await query.order('fecha_hora', ascending: false, nullsFirst: false)
+        .order('id', ascending: false)
+        .order('id', referencedTable: 'detalle_venta')
+        .limit(201, referencedTable: 'detalle_venta')
+        .range(page * 50, page * 50 + 50)
+        .retry(enabled: false).timeout(const Duration(seconds: 20));
+  }
+
   static String get salesModeMessage => !isSyncEnabled
       ? 'Ventas solo en el dispositivo. No se enviarán automáticamente después. El inventario remoto requiere su propia sesión y permisos.'
       : onlineSalesEnabled

@@ -53,8 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _roleService.isAdmin
         ? const DailyDashboardScreen()
         : const SizedBox.shrink(),
-    const HistoryScreen(),
-    _roleService.isAdmin ? const CajaScreen() : const SizedBox.shrink(),
+    HistoryScreen(active: _selected == _Section.history),
+    _roleService.isAdmin ? CajaScreen(active: _selected == _Section.caja) : const SizedBox.shrink(),
     const SettingsScreen(),
   ];
 

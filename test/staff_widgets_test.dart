@@ -523,8 +523,12 @@ void main() {
         await tester.enterText(fields.at(1), '70');
         await tester.enterText(fields.at(2), 'Descripción nueva');
         if (promo) {
-          await tester.ensureVisible(find.byType(SwitchListTile));
-          await tester.tap(find.byType(SwitchListTile));
+          final promoSwitch = find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(SwitchListTile),
+          );
+          await tester.ensureVisible(promoSwitch);
+          await tester.tap(promoSwitch);
           await tester.pumpAndSettle();
         }
         await tester.tap(find.text('Guardar'));

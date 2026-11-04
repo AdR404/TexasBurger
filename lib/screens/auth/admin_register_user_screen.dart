@@ -235,15 +235,12 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
               children: [
                 Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        'Alta de Personal',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.navyBlue,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      'Alta de Personal',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
                       ),
                     ),
                     SizedBox(width: 8),
@@ -397,7 +394,6 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedRole,
-                          isExpanded: true,
                           decoration: _inputDecoration(
                             hint: 'Rol',
                             icon: Icons.badge_outlined,
@@ -440,7 +436,6 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedBranchId,
-                          isExpanded: true,
                           decoration: _inputDecoration(
                             hint: 'Sucursal',
                             icon: Icons.store_outlined,
@@ -732,4 +727,3 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
     );
   }
 }
-

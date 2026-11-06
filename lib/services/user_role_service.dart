@@ -24,16 +24,9 @@ class UserRoleService extends ChangeNotifier {
     }
   }
 
-  /// Simulación de autenticación sin backend
-  /// Usuario: admin
-  /// Contraseña: admin
-  bool loginAdmin(String username, String password) {
-    if (username.trim().toLowerCase() == 'admin' && password.trim() == 'admin') {
-      _role = UserRole.admin;
-      notifyListeners();
-      return true;
-    }
-    return false;
+  void setAuthenticatedRole(String role) {
+    _role = role.toLowerCase() == 'admin' ? UserRole.admin : UserRole.user;
+    notifyListeners();
   }
 
   void switchToUser() {
@@ -41,8 +34,4 @@ class UserRoleService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleRoleDirectly() {
-    _role = _role == UserRole.admin ? UserRole.user : UserRole.admin;
-    notifyListeners();
-  }
 }

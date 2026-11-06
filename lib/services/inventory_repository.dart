@@ -181,16 +181,14 @@ class InventoryRepository {
     required String type,
     required double quantity,
     required String reason,
-    required bool isDemo,
   }) {
-    if (isDemo ||
-        lotId <= 0 ||
+    if (lotId <= 0 ||
         !['salida', 'descarte'].contains(type) ||
         !validInventoryDecimal(quantity, 3) ||
         quantity <= 0 ||
         reason.trim().isEmpty) {
       throw const InventoryException(
-        'Movimiento inválido. Los lotes demo no se envían a Supabase.',
+        'Movimiento inválido. Revisa lote, tipo, cantidad y motivo.',
       );
     }
     return _write('inventario_registrar_baja', {

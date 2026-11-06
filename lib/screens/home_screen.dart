@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/texas_header.dart';
-import '../widgets/role_switch_button.dart';
 import '../widgets/user_session_button.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
@@ -110,11 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: _subtitles[_selected.index],
             trailing: const Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                RoleSwitchButton(),
-                SizedBox(width: 6),
-                UserSessionButton(),
-              ],
+              children: [UserSessionButton()],
             ),
           ),
           Expanded(

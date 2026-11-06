@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../services/app_auth_service.dart';
 import '../../theme/app_theme.dart';
@@ -72,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _fillCredentials(String email, String password) {
+  void _fillDebugCredentials(String email, String password) {
     setState(() {
       _emailController.text = email;
       _passwordController.text = password;
@@ -215,9 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 18),
                             ],
 
-                            // Campo de Correo / Usuario
+                            // Correo de la cuenta de Supabase Auth
                             const Text(
-                              'Correo o Usuario',
+                              'Correo electrónico',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
@@ -441,96 +442,51 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-
-                  // Acceso rápido de prueba / demo
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.gold.withValues(alpha: 0.6),
-                        width: 1,
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.borderLight),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Cuentas locales de prueba (solo debug)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              ActionChip(
+                                label: const Text('Admin de prueba'),
+                                onPressed: () => _fillDebugCredentials(
+                                  AppAuthService.debugAdminEmail,
+                                  AppAuthService.debugAdminPassword,
+                                ),
+                              ),
+                              ActionChip(
+                                label: const Text('Cajera de prueba'),
+                                onPressed: () => _fillDebugCredentials(
+                                  AppAuthService.debugCashierEmail,
+                                  AppAuthService.debugCashierPassword,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.speed_rounded,
-                              size: 16,
-                              color: AppTheme.goldDark,
-                            ),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Acceso rápido de prueba (Demo)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.goldDark,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            ActionChip(
-                              avatar: const Icon(
-                                Icons.admin_panel_settings,
-                                size: 16,
-                                color: AppTheme.navyBlue,
-                              ),
-                              label: const Text(
-                                'Admin (demo)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              backgroundColor: AppTheme.goldLight,
-                              side: const BorderSide(color: AppTheme.gold),
-                              onPressed: () => _fillCredentials(
-                                'admin@texasburger.com',
-                                'admin123',
-                              ),
-                            ),
-                            ActionChip(
-                              avatar: const Icon(
-                                Icons.point_of_sale,
-                                size: 16,
-                                color: AppTheme.navyBlue,
-                              ),
-                              label: const Text(
-                                'Cajero (demo)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              backgroundColor: AppTheme.primarySoft,
-                              side: const BorderSide(
-                                color: AppTheme.navyBlueLight,
-                              ),
-                              onPressed: () => _fillCredentials(
-                                'cajero@texasburger.com',
-                                'caja123',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
+
                 ],
               ),
             ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/auth/admin_register_user_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../services/app_auth_service.dart';
 import '../services/user_role_service.dart';
@@ -120,95 +119,6 @@ class UserSessionButton extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
-                const Divider(),
-
-                // Opción exclusiva de Admin: Registrar Nuevo Usuario
-                if (isAdmin) ...[
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.goldLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.person_add_alt_1_rounded,
-                        color: AppTheme.navyBlue,
-                        size: 20,
-                      ),
-                    ),
-                    title: const Text(
-                      'Registrar Nuevo Usuario',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppTheme.navyBlue,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Alta de cajeros y administradores',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    trailing: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppTheme.navyBlue,
-                    ),
-                    onTap: () {
-                      Navigator.pop(bottomSheetCtx);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AdminRegisterUserScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(),
-                ],
-
-                // Alternar rol rápido (simulación)
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primarySoft,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.swap_horiz_rounded,
-                      color: AppTheme.navyBlue,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    isAdmin ? 'Cambiar a modo Cajero' : 'Cambiar a modo Admin',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  subtitle: Text(
-                    isAdmin
-                        ? 'Oculta paneles restringidos de administración'
-                        : 'Acceso temporal de administración',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    roleService.toggleRoleDirectly();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          roleService.isAdmin
-                              ? 'Modo Administrador activado.'
-                              : 'Modo Cajero activado.',
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-
                 const Divider(),
 
                 // Cerrar Sesión

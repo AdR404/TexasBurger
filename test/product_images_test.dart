@@ -94,7 +94,7 @@ void main() {
       });
       final service = ProductService.forTesting();
       await service.init();
-      UserRoleService().loginAdmin('admin', 'admin');
+      UserRoleService().setAuthenticatedRole('admin');
       addTearDown(() => UserRoleService().switchToUser());
       await service.updatePrice(product.id, 160);
       await service.toggleAvailability(product.id);

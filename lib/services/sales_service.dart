@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/venta.dart';
 import '../models/venta_item.dart';
-import '../models/producto.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
 import 'user_role_service.dart';
@@ -165,74 +164,4 @@ class SalesService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadSampleSales(List<Producto> catalog) async {
-    UserRoleService().requireAdmin();
-    if (catalog.isEmpty) return;
-    final now = DateTime.now();
-    final pClassic = catalog.firstWhere(
-      (p) => p.id == 'hamb_texana_clasica',
-      orElse: () => catalog[0],
-    );
-    final pSuper = catalog.firstWhere(
-      (p) => p.id == 'hamb_super_texana',
-      orElse: () => catalog[1],
-    );
-    final pCombo = catalog.firstWhere(
-      (p) => p.id == 'combo_pollo_especial',
-      orElse: () => catalog[0],
-    );
-    final pWalter = catalog.firstWhere(
-      (p) => p.id == 'hamb_walter_especial',
-      orElse: () => catalog[0],
-    );
-
-    final samples = [
-      Venta(
-        id: 'sample_1',
-        ticketNumber: 1001,
-        items: [
-          VentaItem(product: pClassic, quantity: 2, unitPrice: pClassic.price),
-          VentaItem(product: pCombo, quantity: 1, unitPrice: pCombo.price),
-        ],
-        subtotal: (pClassic.price * 2) + pCombo.price,
-        discount: 0,
-        total: (pClassic.price * 2) + pCombo.price,
-        paymentMethod: 'Efectivo',
-        cashGiven: 400.0,
-        changeReturned: 400.0 - ((pClassic.price * 2) + pCombo.price),
-        timestamp: DateTime(now.year, now.month, now.day, 13, 15),
-      ),
-      Venta(
-        id: 'sample_2',
-        ticketNumber: 1002,
-        items: [
-          VentaItem(product: pSuper, quantity: 2, unitPrice: pSuper.price),
-        ],
-        subtotal: pSuper.price * 2,
-        discount: 0,
-        total: pSuper.price * 2,
-        paymentMethod: 'Tarjeta',
-        timestamp: DateTime(now.year, now.month, now.day, 14, 30),
-      ),
-      Venta(
-        id: 'sample_3',
-        ticketNumber: 1003,
-        items: [
-          VentaItem(product: pWalter, quantity: 1, unitPrice: pWalter.price),
-          VentaItem(product: pClassic, quantity: 1, unitPrice: pClassic.price),
-        ],
-        subtotal: pWalter.price + pClassic.price,
-        discount: 0,
-        total: pWalter.price + pClassic.price,
-        paymentMethod: 'Transferencia',
-        timestamp: DateTime(now.year, now.month, now.day, 16, 45),
-      ),
-    ];
-
-    _sales.addAll(samples);
-    _sales.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    if (_lastTicketNumber < 1003) _lastTicketNumber = 1003;
-    await _save();
-    notifyListeners();
-  }
 }

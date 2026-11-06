@@ -9,18 +9,22 @@ class AppTheme {
   // ---------------------------------------------------------------------------
   // Colores base de la marca (los del logo)
   // ---------------------------------------------------------------------------
-  static const Color navyBlue = Color(0xFF0F2643);
-  static const Color navyBlueLight = Color(0xFF1E3A5F);
-  static const Color gold = Color(0xFFF5A623);
-  static const Color goldLight = Color(0xFFFFF7E6);
-  static const Color texasYellow = Color(0xFFFFD43B);
-  static const Color creamBg = Color(0xFFFBF3DE);
+  static const Color alabamaCrimson = Color(0xFFA91314);
+  static const Color intenseFire = Color(0xFFFFB607);
+  static const Color bananaMania = Color(0xFFFCECCB);
+  static const Color lapisLazuli = Color(0xFF236092);
+  static const Color navyBlue = lapisLazuli;
+  static const Color navyBlueLight = Color(0xFF3477A8);
+  static const Color gold = intenseFire;
+  static const Color goldLight = Color(0xFFFFF3D1);
+  static const Color texasYellow = intenseFire;
+  static const Color creamBg = bananaMania;
   static const Color cardBg = Colors.white;
   static const Color textDark = Color(0xFF181B1F);
   static const Color textMuted = Color(0xFF6A7280);
-  static const Color borderLight = Color(0xFFEDE4CC);
+  static const Color borderLight = Color(0xFFE8D8B5);
   static const Color successGreen = Color(0xFF10B981);
-  static const Color infoBlue = Color(0xFF2563EB);
+  static const Color infoBlue = lapisLazuli;
 
   // ---------------------------------------------------------------------------
   // Roles de color: usa estos nombres en las pantallas, no el color directo.
@@ -30,23 +34,23 @@ class AppTheme {
   static const Color primary = navyBlue;
 
   /// Fondo suave del color principal (círculos de ícono, chips, filas).
-  static const Color primarySoft = Color(0xFFE7ECF3);
+  static const Color primarySoft = Color(0xFFE5F0F7);
 
   /// Promociones y descuentos. Es el único uso de rojo "de contenido".
-  static const Color promo = Color(0xFFD31A24);
-  static const Color promoSoft = Color(0xFFFFECEE);
+  static const Color promo = alabamaCrimson;
+  static const Color promoSoft = Color(0xFFFBE8E7);
 
   /// Eliminar, gastos, diferencias negativas y errores.
-  static const Color danger = Color(0xFFD31A24);
-  static const Color dangerSoft = Color(0xFFFFECEE);
+  static const Color danger = alabamaCrimson;
+  static const Color dangerSoft = Color(0xFFFBE8E7);
 
   /// Marca: logo y eslogan.
-  static const Color brand = Color(0xFFD31A24);
+  static const Color brand = alabamaCrimson;
 
   /// Fondos suaves de apoyo (confirmaciones, información y destacados).
   static const Color successSoft = Color(0xFFECFDF5);
   static const Color infoSoft = Color(0xFFDDEFFB);
-  static const Color goldSoft = Color(0xFFFFF1B8);
+  static const Color goldSoft = Color(0xFFFFE6A3);
   static const Color goldDark = Color(0xFF7A4B00);
 
   // ---------------------------------------------------------------------------
@@ -78,13 +82,13 @@ class AppTheme {
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: texasYellow,
-        foregroundColor: navyBlue,
+        foregroundColor: textDark,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w900,
-          color: navyBlue,
+          color: textDark,
           letterSpacing: 0.3,
         ),
       ),

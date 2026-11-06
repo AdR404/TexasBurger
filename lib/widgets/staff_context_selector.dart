@@ -9,12 +9,14 @@ class StaffContextSelector extends StatefulWidget {
   final SaleContext? initialSelection;
   final bool lockBranch;
   final ValueChanged<SaleContext> onChanged;
+  final Future<List<StaffEmployee>> Function()? employeeLoader;
 
   const StaffContextSelector({
     super.key,
     this.initialSelection,
     this.lockBranch = false,
     required this.onChanged,
+    this.employeeLoader,
   });
 
   @override
@@ -24,17 +26,55 @@ class StaffContextSelector extends StatefulWidget {
 class _StaffContextSelectorState extends State<StaffContextSelector> {
   String? _branchId;
   String? _employeeId;
+  List<StaffEmployee> _employees = const [];
+  bool _loadingEmployees = true;
+  String? _employeeError;
 
   @override
   void initState() {
     super.initState();
     _branchId = widget.initialSelection?.branchId;
-    _employeeId = widget.initialSelection?.employeeId;
+    _loadEmployees();
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final loader = widget.employeeLoader ?? StaffCatalog.loadEmployees;
+      final employees = await loader();
+      if (!mounted) return;
+      setState(() {
+        _employees = employees;
+        final initialId = widget.initialSelection?.employeeId;
+        _employeeId = employees.any((employee) => employee.id == initialId)
+            ? initialId
+            : null;
+        _loadingEmployees = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _employeeError =
+            'No se pudo consultar el personal activo. Revisa la conexión.';
+        _loadingEmployees = false;
+      });
+    }
   }
 
   void _notifySelection() {
     if (_branchId != null && _employeeId != null) {
-      widget.onChanged(StaffCatalog.selection(_branchId!, _employeeId!));
+      final branchName = StaffCatalog.branches[_branchId];
+      final employee = _employees
+          .where((item) => item.id == _employeeId)
+          .firstOrNull;
+      if (branchName == null || employee == null) return;
+      widget.onChanged(
+        SaleContext(
+          branchId: _branchId!,
+          branchName: branchName,
+          employeeId: employee.id,
+          employeeName: employee.name,
+        ),
+      );
     }
   }
 
@@ -80,22 +120,34 @@ class _StaffContextSelectorState extends State<StaffContextSelector> {
         initialValue: _employeeId,
         isExpanded: true,
         decoration: const InputDecoration(labelText: 'Empleado activo'),
-        items: StaffCatalog.employees.entries
+        items: _employees
             .map(
-              (entry) =>
-                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+              (employee) => DropdownMenuItem(
+                value: employee.id,
+                child: Text(employee.name),
+              ),
             )
             .toList(),
-        onChanged: (value) {
+        onChanged: _loadingEmployees || _employees.isEmpty
+            ? null
+            : (value) {
           setState(() => _employeeId = value);
           _notifySelection();
         },
       ),
       const SizedBox(height: 8),
-      const Text(
-        'Empleados ficticios de demostración. Cambia el empleado cuando otra persona atienda.',
-        style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-      ),
+      if (_loadingEmployees)
+        const LinearProgressIndicator()
+      else if (_employeeError != null)
+        Text(
+          _employeeError!,
+          style: const TextStyle(fontSize: 12, color: AppTheme.danger),
+        )
+      else if (_employees.isEmpty)
+        const Text(
+          'No hay empleados activos configurados para ventas.',
+          style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
     ],
   );
 }

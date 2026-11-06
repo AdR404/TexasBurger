@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/discount_code.dart';
 import 'package:texas_burger/models/producto.dart';
 import 'package:texas_burger/models/venta.dart';
@@ -20,6 +19,7 @@ import 'package:texas_burger/theme/app_theme.dart';
 import 'package:texas_burger/widgets/cart_bottom_sheet.dart';
 import 'package:texas_burger/widgets/discount_codes_dialog.dart';
 import 'package:texas_burger/widgets/ticket_dialog.dart';
+import 'support/staff_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +60,7 @@ void main() {
     await SalesService().init();
     await CajaService().init();
     await CajaService().updateSaleContext(
-      StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+      testStaffSelection('norte', 'demo_sofia_reyes'),
     );
   });
   setUp(roles.switchToUser);
@@ -85,7 +85,7 @@ void main() {
         find.text('Disponible solo en modo administrador.'),
         findsOneWidget,
       );
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.pumpAndSettle();
       await tester.enterText(field('Código'), ' diez_ui ');
       await tester.enterText(
@@ -127,7 +127,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(discounts.findActive('DIEZ_UI'), isNotNull);
       expect(find.text('Guardar código'), findsNothing);
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byTooltip('Eliminar código').first);
       await tester.runAsync(() async {
@@ -148,7 +148,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Códigos de descuento'), findsNothing);
-    roles.loginAdmin('admin', 'admin');
+    roles.setAuthenticatedRole('admin');
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Administrar'));
     await tester.tap(find.text('Administrar'));
@@ -168,7 +168,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.runAsync(
         () => discounts.save(
           const DiscountCode(
@@ -192,7 +192,7 @@ void main() {
         find.descendant(of: card, matching: find.byIcon(Icons.add)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Ver Orden'));
+      await tester.tap(find.text('Ver orden'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(field('Código de descuento'));
       await tester.enterText(field('Código de descuento'), 'noexiste');
@@ -227,7 +227,7 @@ void main() {
             find.widgetWithText(ElevatedButton, 'Cobrar \$208.80'),
           )
           .onPressed!;
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.runAsync(() => discounts.setActive('VENTA10', false));
       roles.switchToUser();
       staleCharge();
@@ -285,7 +285,7 @@ void main() {
         total: 104.4,
         paymentMethod: 'Tarjeta',
         timestamp: DateTime(2026, 10, 26, 12),
-        saleContext: StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+        saleContext: testStaffSelection('norte', 'demo_sofia_reyes'),
       );
       await tester.pumpWidget(
         MaterialApp(

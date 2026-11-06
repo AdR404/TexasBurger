@@ -8,11 +8,9 @@ import '../services/operator_session.dart';
 import '../data/staff_catalog.dart';
 import '../widgets/operator_access_card.dart';
 import '../theme/app_theme.dart';
-import '../data/ingredient_catalog.dart';
 import '../widgets/add_inventory_lot_sheet.dart';
 import '../models/inventory_lot.dart';
 import '../widgets/inventory_lot_detail_sheet.dart';
-import '../data/inventory_demo_data.dart';
 import '../widgets/inventory_expiry_badge.dart';
 import '../widgets/inventory_movements_sheet.dart';
 
@@ -35,7 +33,6 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   String _search = '';
   String _locationFilter = 'Todos';
-  bool _demoMode = false;
   late final InventoryRepository _repository;
   OperatorSession? _session;
   String? _actor;
@@ -67,7 +64,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _sessionChanged() {
     if (_actor == _repository.operatorId) return;
     _actor = _repository.operatorId;
-    if (!_demoMode) _load();
+    _load();
   }
 
   Future<bool> _load() async {
@@ -78,7 +75,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _error = null;
       _loading = false;
     });
-    if (_demoMode) return false;
     if (_repository.operatorId == null) {
       setState(
         () => _error =
@@ -117,24 +113,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _addLot() async {
     if (_working || _loading || !UserRoleService().isAdmin) return;
-    final demo = _demoMode;
     final actor = _repository.operatorId;
     final branch = _branch;
     final ingredients = _data?.ingredients;
-    if (!demo && (ingredients == null || branch == null || actor == null)) {
-      return;
-    }
+    if (ingredients == null || branch == null || actor == null) return;
     setState(() => _working = true);
     try {
       final draft = await showAddInventoryLotSheet(
         context,
-        ingredients: demo ? null : ingredients,
+        ingredients: ingredients,
       );
       if (draft == null || !mounted) return;
-      if (demo) {
-        _message('Lote validado en demostración. No se guardó en Supabase.');
-        return;
-      }
       if (!UserRoleService().isAdmin ||
           actor != _repository.operatorId ||
           branch != _branch) {
@@ -142,12 +131,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
           'Cambió el acceso o la sucursal. Abre el formulario de nuevo.',
         );
       }
-      final ingredient = ingredients!.firstWhere(
+      final ingredient = ingredients.firstWhere(
         (i) => i.id == draft.ingredientId,
       );
       final id = await _repository.registerLot(
         ingredient: ingredient,
-        branch: branch!,
+        branch: branch,
         location: draft.location,
         quantity: draft.quantity,
         cost: draft.unitCost,
@@ -171,25 +160,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _movements() async {
     if (_working || _loading || !UserRoleService().isAdmin) return;
-    final demo = _demoMode;
     final actor = _repository.operatorId;
     final branch = _branch;
-    if (!demo && (_data == null || actor == null)) return;
+    if (_data == null || actor == null || branch == null) return;
     setState(() => _working = true);
     try {
       final draft = await showInventoryMovementsSheet(
         context,
-        lots: demo ? InventoryDemoData.create() : _data!.lots,
-        isDemo: demo,
-        history: demo ? const [] : _data!.movements,
+        lots: _data!.lots,
+        history: _data!.movements,
       );
       if (draft == null || !mounted) return;
-      if (demo) {
-        _message(
-          'Movimiento validado en demostración. No se descontaron existencias.',
-        );
-        return;
-      }
       if (!UserRoleService().isAdmin ||
           actor != _repository.operatorId ||
           branch != _branch) {
@@ -202,7 +183,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
         type: draft.type.name,
         quantity: draft.quantity,
         reason: draft.reason,
-        isDemo: draft.isDemo,
       );
       if (!mounted) return;
       final loaded = await _load();
@@ -229,12 +209,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     final search = _search.trim().toLowerCase();
 
-    final displayedLots = _demoMode
-        ? InventoryDemoData.create()
-        : (_data?.lots ?? const <InventoryLot>[]);
-    final ingredientNames = _demoMode
-        ? IngredientCatalog.defaultIngredients
-        : (_data?.ingredients.map((i) => i.name).toList() ?? <String>[]);
+    final displayedLots = _data?.lots ?? const <InventoryLot>[];
+    final ingredientNames =
+      _data?.ingredients.map((i) => i.name).toList() ?? <String>[];
 
     final totalIngredients = ingredientNames.length;
 
@@ -332,8 +309,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Consulta y valida insumos, lotes y fechas de caducidad. '
-                  'El acceso remoto requiere una cuenta autorizada; el modo demo no guarda cambios.',
+                  'Consulta y administra insumos, lotes y fechas de caducidad con una cuenta autorizada.',
                   style: TextStyle(color: AppTheme.navyBlue),
                 ),
               ],
@@ -379,12 +355,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           const SizedBox(height: 24),
 
-          if (!_demoMode) ...[
-            const OperatorAccessCard(
+          const OperatorAccessCard(
               contextMessage:
                   'Inventario: inicia sesión con la cuenta autorizada en Supabase. El rol local no concede permisos remotos.',
             ),
-            DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(
               key: ValueKey(_branch),
               initialValue: _branch,
               decoration: const InputDecoration(
@@ -401,43 +376,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       setState(() => _branch = value);
                       _load();
                     },
-            ),
-            if (_loading) const LinearProgressIndicator(),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: AppTheme.danger)),
-            TextButton(
-              onPressed: _working || _loading ? null : _load,
-              child: const Text('Actualizar inventario'),
-            ),
-            if (_data != null && _data!.lots.isEmpty)
-              const Text('No hay lotes registrados en esta sucursal.'),
-          ],
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text(
-              'Mostrar datos simulados',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.navyBlue,
-              ),
-            ),
-            subtitle: const Text(
-              'Solo para probar la interfaz. '
-              'No se guardan en Supabase.',
-            ),
-            value: _demoMode,
-            onChanged: _working
-                ? null
-                : (enabled) {
-                    setState(() {
-                      _demoMode = enabled;
-                      _revision++;
-                      _loading = false;
-                      _data = null;
-                    });
-                    if (!enabled) _load();
-                  },
           ),
+          if (_loading) const LinearProgressIndicator(),
+          if (_error != null)
+            Text(_error!, style: const TextStyle(color: AppTheme.danger)),
+          TextButton(
+            onPressed: _working || _loading ? null : _load,
+            child: const Text('Actualizar inventario'),
+          ),
+          if (_data != null && _data!.lots.isEmpty)
+            const Text('No hay lotes registrados en esta sucursal.'),
 
           const SizedBox(height: 12),
 
@@ -455,9 +403,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _working || _loading || (!_demoMode && _data == null)
-                  ? null
-                  : _addLot,
+                  onPressed: _working || _loading || _data == null
+                    ? null
+                    : _addLot,
               child: const Text('Agregar lote'),
             ),
           ),
@@ -467,7 +415,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: _working || _loading || (!_demoMode && _data == null)
+                onPressed: _working || _loading || _data == null
                   ? null
                   : _movements,
               child: const Text('Movimientos de inventario'),
@@ -573,7 +521,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             Text(
                               '${ingredientLots.length} lote(s) '
                               '· $locations\n'
-                              '${_demoMode ? 'Existencia simulada' : 'Existencia registrada'}: '
+                              'Existencia registrada: '
                               '${inventoryAvailableText(ingredientLots)}',
                               style: const TextStyle(
                                 color: AppTheme.textMuted,
@@ -609,7 +557,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       builder: (_) => InventoryLotDetailSheet(
                         ingredientName: ingredient,
                         lots: ingredientLots,
-                        isDemo: _demoMode,
                       ),
                     );
                   },

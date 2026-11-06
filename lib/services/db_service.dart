@@ -127,10 +127,9 @@ class DbService {
         throw StateError('Faltan contexto, productos o desglose fiscal.');
       }
       final employee = await db.from('empleados_pos').select('usuario_id')
-          .eq('id', context.employeeId).eq('activo', true).single().retry(enabled: false);
+          .eq('id', context.employeeId).eq('activo', true).eq('es_demo', false)
+          .single().retry(enabled: false);
       final userId = employee['usuario_id'];
-      // Demo employees may have no user; ventas.usuario_id is nullable.
-      // The active employee lookup above remains mandatory in both cases.
       if (userId != null) {
         if (userId is! int) throw StateError('El usuario asociado al empleado no es válido.');
         await db.from('usuarios').select('id').eq('id', userId)

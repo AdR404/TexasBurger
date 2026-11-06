@@ -15,7 +15,6 @@ import 'package:texas_burger/services/product_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
 import 'package:texas_burger/services/caja_service.dart';
 import 'package:texas_burger/services/user_role_service.dart';
-import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/producto.dart';
 import 'package:texas_burger/models/sale_context.dart';
 import 'package:texas_burger/models/venta.dart';
@@ -24,6 +23,7 @@ import 'package:texas_burger/widgets/sale_history_list.dart';
 import 'package:texas_burger/widgets/staff_context_selector.dart';
 import 'package:texas_burger/widgets/ticket_dialog.dart';
 import 'package:texas_burger/theme/app_theme.dart';
+import 'support/staff_fixtures.dart';
 
 Venta ticket({
   SaleContext? selection,
@@ -88,6 +88,7 @@ void main() {
               padding: const EdgeInsets.all(16),
               child: StaffContextSelector(
                 onChanged: (value) => selected = value,
+                employeeLoader: loadTestStaffEmployees,
               ),
             ),
           ),
@@ -118,16 +119,18 @@ void main() {
           theme: AppTheme.lightTheme,
           home: Scaffold(
             body: StaffContextSelector(
-              initialSelection: StaffCatalog.selection(
+              initialSelection: testStaffSelection(
                 'perimetral_sur',
                 'demo_ana_torres',
               ),
               lockBranch: true,
               onChanged: (value) => selected = value,
+              employeeLoader: loadTestStaffEmployees,
             ),
           ),
         ),
       );
+      await tester.pumpAndSettle();
       final branch = tester.widget<DropdownButtonFormField<String>>(
         find.byKey(const ValueKey('staff-branch')),
       );
@@ -140,6 +143,35 @@ void main() {
       expect(selected!.employeeName, 'Luis García');
     },
   );
+
+  testWidgets('empty real employee catalog cannot create a sale context', (
+    tester,
+  ) async {
+    SaleContext? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          body: StaffContextSelector(
+            onChanged: (value) => selected = value,
+            employeeLoader: () async => const [],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No hay empleados activos configurados para ventas.'),
+      findsOneWidget,
+    );
+    final employeeField = tester.widget<DropdownButtonFormField<String>>(
+      find.byKey(const ValueKey('staff-employee')),
+    );
+    expect(employeeField.onChanged, isNull);
+    expect(selected, isNull);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'ticket shows and copies metadata along with original purchase details',
@@ -170,7 +202,7 @@ void main() {
           home: Scaffold(
             body: TicketDialog(
               venta: ticket(
-                selection: StaffCatalog.selection(
+                selection: testStaffSelection(
                   'perimetral_sur',
                   'demo_ana_torres',
                 ),
@@ -279,7 +311,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final sale = ticket(
       timestamp: DateTime.now(),
-      selection: StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+      selection: testStaffSelection('norte', 'demo_sofia_reyes'),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -316,7 +348,7 @@ void main() {
       );
       expect(find.text('Abrir caja'), findsNothing);
       expect(find.byTooltip('Exportar ventas del periodo'), findsNothing);
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.pumpAndSettle();
       expect(find.text('Disponible solo en modo administrador.'), findsNothing);
       roles.switchToUser();
@@ -403,7 +435,7 @@ void main() {
       // El usuario puede vender y cambiar cantidades en el carrito
       await tester.runAsync(
         () => CajaService().updateSaleContext(
-          StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+          testStaffSelection('norte', 'demo_sofia_reyes'),
         ),
       );
       final plainCard = find.ancestor(
@@ -418,7 +450,7 @@ void main() {
         find.descendant(of: plainCard, matching: find.byIcon(Icons.add)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Ver Orden'));
+      await tester.tap(find.text('Ver orden'));
       await tester.pumpAndSettle();
       final cart = tester.widget<CartBottomSheet>(find.byType(CartBottomSheet));
       expect(cart.cartItems.single.quantity, 2);
@@ -468,16 +500,8 @@ void main() {
       expect(find.byTooltip('Editar precio'), findsNothing);
       expect(find.byType(Switch), findsNothing);
 
-      // Prueba de inicio de sesión como administrador desde la interfaz
-      await tester.tap(find.text('Usuario'));
-      await tester.pumpAndSettle();
-      final loginFields = find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      );
-      await tester.enterText(loginFields.at(0), 'admin');
-      await tester.enterText(loginFields.at(1), 'admin');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      // Simula el rol que se asigna al iniciar sesión con una cuenta real.
+      roles.setAuthenticatedRole('admin');
       await tester.pumpAndSettle();
       expect(roles.isAdmin, isTrue);
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -539,7 +563,7 @@ void main() {
         expect(created.price, 70);
         expect(created.isPromo, promo);
       }
-      // Si se cambia a modo usuario con un diálogo abierto, no permite guardar cambios
+      // Si se revoca el rol mientras un diálogo está abierto, no guarda cambios.
       await tester.ensureVisible(find.byTooltip('Editar precio').first);
       await tester.tap(find.byTooltip('Editar precio').first);
       await tester.pumpAndSettle();
@@ -617,7 +641,7 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       for (final restrictedIndex in [1, 3, 1, 3]) {
-        roles.loginAdmin('admin', 'admin');
+        roles.setAuthenticatedRole('admin');
         await tester.pumpAndSettle();
         await tester.tap(
           find.byType(NavigationDestination).at(restrictedIndex),
@@ -646,7 +670,7 @@ void main() {
       }
       // Operaciones de apertura, movimientos y cierre de caja en modo administrador
       tester.view.physicalSize = const Size(400, 900);
-      roles.loginAdmin('admin', 'admin');
+      roles.setAuthenticatedRole('admin');
       await tester.pumpAndSettle();
       await tester.tap(find.byType(NavigationDestination).at(3));
       await tester.pumpAndSettle();
@@ -685,12 +709,12 @@ void main() {
       roles.switchToUser();
       await tester.runAsync(
         () => CajaService().updateSaleContext(
-          StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+          testStaffSelection('norte', 'demo_sofia_reyes'),
         ),
       );
       await tester.pumpAndSettle();
       expect(find.byType(QuickSaleScreen), findsOneWidget);
-      await tester.tap(find.text('Ver Orden'));
+      await tester.tap(find.text('Ver orden'));
       await tester.pumpAndSettle();
       final retainedCart = tester.widget<CartBottomSheet>(
         find.byType(CartBottomSheet),

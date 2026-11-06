@@ -157,7 +157,7 @@ class _OperatorLoginDialogState extends State<_OperatorLoginDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Usa tu cuenta individual asignada. Este acceso no modifica el rol local de demostración.',
+                'Usa tu cuenta individual asignada. La autorización remota es independiente del rol de interfaz.',
               ),
               TextFormField(
                 controller: _email,

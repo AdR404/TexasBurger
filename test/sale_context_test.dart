@@ -11,10 +11,11 @@ import 'package:texas_burger/models/venta_item.dart';
 import 'package:texas_burger/services/caja_service.dart';
 import 'package:texas_burger/services/export_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
+import 'support/staff_fixtures.dart';
 
-final ana = StaffCatalog.selection('perimetral_sur', 'demo_ana_torres');
-final luis = StaffCatalog.selection('perimetral_sur', 'demo_luis_garcia');
-final norte = StaffCatalog.selection('norte', 'demo_sofia_reyes');
+final ana = testStaffSelection('perimetral_sur', 'demo_ana_torres');
+final luis = testStaffSelection('perimetral_sur', 'demo_luis_garcia');
+final norte = testStaffSelection('norte', 'demo_sofia_reyes');
 
 Venta exampleSale({SaleContext? context}) => Venta(
   id: 'existing_sale',
@@ -59,16 +60,11 @@ void main() {
   tearDown(() => UserRoleService().switchToUser());
 
   test(
-    'catalog IDs are stable and demo staff have no numeric user mapping',
+    'branch IDs are stable and test employees remain outside the app catalog',
     () {
       expect(StaffCatalog.branches.keys, ['perimetral_sur', 'norte']);
-      expect(StaffCatalog.employees.length, 3);
       expect(
-        StaffCatalog.employees.keys.every((id) => id.startsWith('demo_')),
-        isTrue,
-      );
-      expect(
-        () => StaffCatalog.selection('unknown', 'demo_ana_torres'),
+        () => testStaffSelection('unknown', 'demo_ana_torres'),
         throwsArgumentError,
       );
     },
@@ -184,7 +180,7 @@ void main() {
     () async {
       final caja = CajaService.forTesting();
       await caja.init();
-      UserRoleService().loginAdmin('admin', 'admin');
+      UserRoleService().setAuthenticatedRole('admin');
       await caja.abrirCaja(500, saleContext: ana);
       await caja.updateSaleContext(luis);
       await expectLater(caja.updateSaleContext(norte), throwsStateError);
@@ -307,7 +303,7 @@ void main() {
         exampleSale(context: luis),
         exampleSale(),
       ], 'Todo');
-      expect(report, contains('VENTA TOTAL:* \$450.00'));
+      expect(report, contains('Venta total:* \$450.00'));
       expect(report, contains('Atendido por: Ana Torres'));
       expect(report, contains('Atendido por: Luis García'));
       expect(report, contains('Atendido por: No registrado'));

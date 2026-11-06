@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Remote identity only. Never reads or changes the local demonstration role.
+/// Remote identity only. Never reads or changes the local UI role.
 abstract class OperatorAuthGateway {
   String? get currentOperatorId;
   String? get validOperatorId;

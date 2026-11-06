@@ -10,7 +10,6 @@ import '../widgets/discount_codes_dialog.dart';
 import '../widgets/product_thumbnail.dart';
 import '../widgets/operator_access_card.dart';
 import 'inventory_screen.dart';
-import 'auth/admin_register_user_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -696,40 +695,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.goldLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.person_add_alt_1_rounded,
-                            color: AppTheme.navyBlue,
-                          ),
-                        ),
-                        title: const Text(
-                          'Gestión de personal y usuarios',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: const Text(
-                          'Registrar nuevos cajeros y administradores',
-                        ),
-                        trailing: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AdminRegisterUserScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Registrar'),
-                        ),
-                      ),
-                      const Divider(),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
                         leading: const Icon(
                           Icons.inventory_2_outlined,
                           color: AppTheme.primary,
@@ -762,21 +727,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             builder: (_) => const DiscountCodesDialog(),
                           ),
                           child: const Text('Administrar'),
-                        ),
-                      ),
-                      const Divider(),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.auto_graph_rounded, color: AppTheme.gold),
-                        title: const Text('Cargar ventas de demostración'),
-                        subtitle: const Text('Deshabilitado para no mezclar ejemplos con el historial y la caja reales.'),
-                        trailing: ElevatedButton(
-                          onPressed: null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.navyBlue,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          ),
-                          child: const Text('Cargar', style: TextStyle(fontSize: 12)),
                         ),
                       ),
                       const Divider(),

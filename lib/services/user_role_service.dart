@@ -1,48 +1,31 @@
 import 'package:flutter/foundation.dart';
+import 'app_auth_service.dart';
 
-enum UserRole {
-  user,
-  admin,
-}
+enum UserRole { user, admin }
 
+/// UI permissions derived from the verified server profile, never a local toggle.
 class UserRoleService extends ChangeNotifier {
   static final UserRoleService _instance = UserRoleService._internal();
   factory UserRoleService() => _instance;
-  UserRoleService._internal();
-
-  // Siempre inicia en modo usuario por requerimiento del cliente
-  UserRole _role = UserRole.user;
-
-  UserRole get currentRole => _role;
-  bool get isAdmin => _role == UserRole.admin;
-  bool get isUser => _role == UserRole.user;
-
-  /// Local UI permission check; this is not backend authentication.
+  UserRoleService._internal() {
+    AppAuthService().addListener(notifyListeners);
+  }
+  UserRole get currentRole => isAdmin ? UserRole.admin : UserRole.user;
+  bool get isAdmin => AppAuthService().isAdmin;
+  bool get isUser => !isAdmin;
   void requireAdmin() {
     if (!isAdmin) {
-      throw StateError('Esta operación requiere el modo administrador.');
+      throw StateError('Se requiere una sesión de administrador autorizada.');
     }
   }
 
-  /// Simulación de autenticación sin backend
-  /// Usuario: admin
-  /// Contraseña: admin
-  bool loginAdmin(String username, String password) {
-    if (username.trim().toLowerCase() == 'admin' && password.trim() == 'admin') {
-      _role = UserRole.admin;
-      notifyListeners();
-      return true;
-    }
-    return false;
-  }
-
+  // Legacy callers cannot elevate permissions. Removed from the UI.
+  bool loginAdmin(String username, String password) => false;
   void switchToUser() {
-    _role = UserRole.user;
     notifyListeners();
   }
 
   void toggleRoleDirectly() {
-    _role = _role == UserRole.admin ? UserRole.user : UserRole.admin;
     notifyListeners();
   }
 }

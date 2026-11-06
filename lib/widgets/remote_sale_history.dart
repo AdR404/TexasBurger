@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../data/staff_catalog.dart';
+import '../services/app_auth_service.dart';
 import '../services/caja_service.dart';
 import '../services/db_service.dart';
 import '../services/sales_service.dart';
@@ -155,14 +155,16 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
                   value: '',
                   child: Text('Todas las sucursales'),
                 ),
-                ...StaffCatalog.branches.entries.map(
+                ...AppAuthService().branches.entries.map(
                   (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
                 ),
               ],
-              onChanged: (value) {
-                _branch = value == '' ? null : value;
-                _refresh();
-              },
+              onChanged: !AppAuthService().isAdmin
+                  ? null
+                  : (value) {
+                      _branch = value == '' ? null : value;
+                      _refresh();
+                    },
             ),
             Wrap(
               spacing: 8,

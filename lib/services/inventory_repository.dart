@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/inventory_lot.dart';
 import 'db_service.dart';
+import 'user_role_service.dart';
 
 class InventoryIngredient {
   const InventoryIngredient(this.id, this.name, this.unit);
@@ -35,6 +36,7 @@ class InventoryRepository {
   String? get operatorId => _operatorId();
 
   Future<String> _authorize() async {
+    UserRoleService().requireAdmin();
     final actor = operatorId;
     if (actor == null) {
       throw const InventoryException(

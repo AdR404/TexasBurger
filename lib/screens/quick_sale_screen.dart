@@ -499,7 +499,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                     ElevatedButton.icon(
                       onPressed: _openCartBottomSheet,
                       icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Ver Orden'),
+                      label: const Text('Ver orden'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,

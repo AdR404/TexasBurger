@@ -7,9 +7,7 @@ import 'services/config_service.dart';
 import 'services/caja_service.dart';
 import 'services/db_service.dart';
 import 'services/discount_code_service.dart';
-import 'services/app_auth_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/auth/login_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +27,6 @@ void main() {
 
 Future<void> initializeServices() async {
   await DbService.init();
-  await AppAuthService().init();
   await ProductService().init();
   await SalesService().init();
   await DiscountCodeService().init();
@@ -77,15 +74,7 @@ class _StartupScreenState extends State<_StartupScreen> {
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done &&
           !snapshot.hasError) {
-        return ListenableBuilder(
-          listenable: AppAuthService(),
-          builder: (context, _) {
-            if (AppAuthService().isAuthenticated) {
-              return const HomeScreen();
-            }
-            return const LoginScreen();
-          },
-        );
+        return const HomeScreen();
       }
       return Scaffold(
         body: SafeArea(

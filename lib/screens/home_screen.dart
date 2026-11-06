@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/texas_header.dart';
 import '../widgets/role_switch_button.dart';
+import '../widgets/user_session_button.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
 import 'quick_sale_screen.dart';
@@ -107,7 +108,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           TexasHeader(
             subtitle: _subtitles[_selected.index],
-            trailing: const RoleSwitchButton(),
+            trailing: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RoleSwitchButton(),
+                SizedBox(width: 6),
+                UserSessionButton(),
+              ],
+            ),
           ),
           Expanded(
             child: IndexedStack(index: _selected.index, children: _screens),

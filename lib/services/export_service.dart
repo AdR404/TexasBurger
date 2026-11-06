@@ -88,7 +88,7 @@ class ExportService {
     final closedStr = corte.closedAt != null ? dtFormat.format(corte.closedAt!) : 'Turno en curso';
 
     final buffer = StringBuffer();
-    buffer.writeln('🍔 *TEXAS BURGER - CORTE DE CAJA* 🍔');
+    buffer.writeln('🍔 *TEXAS BURGER - corte de caja* 🍔');
     buffer.writeln('Empresa: ${corte.openingContext?.companyName ?? SaleContext.texasBurgerName}');
     buffer.writeln('Sucursal: ${corte.openingContext?.branchName ?? SaleContext.notRecorded}');
     buffer.writeln('Abrió caja: ${corte.openingContext?.employeeName ?? SaleContext.notRecorded}');
@@ -103,27 +103,27 @@ class ExportService {
       buffer.writeln('➕ *Entradas a caja:* \$${corte.cashIn.toStringAsFixed(2)}');
     }
     if (corte.cashOut > 0) {
-      buffer.writeln('➖ *Gastos/Salidas:* \$${corte.cashOut.toStringAsFixed(2)}');
+      buffer.writeln('➖ *Gastos/salidas:* \$${corte.cashOut.toStringAsFixed(2)}');
     }
     buffer.writeln('----------------------------------');
-    buffer.writeln('💰 *EFECTIVO ESPERADO:* \$${corte.expectedCash.toStringAsFixed(2)}');
+    buffer.writeln('💰 *Efectivo esperado:* \$${corte.expectedCash.toStringAsFixed(2)}');
     
     if (corte.actualCashCounted != null) {
-      buffer.writeln('💵 *EFECTIVO CONTADO:* \$${corte.actualCashCounted!.toStringAsFixed(2)}');
+      buffer.writeln('💵 *Efectivo contado:* \$${corte.actualCashCounted!.toStringAsFixed(2)}');
       final diff = corte.difference ?? 0.0;
       if (diff == 0) {
         buffer.writeln('✅ *Diferencia:* \$0.00 (caja cuadrada)');
       } else if (diff > 0) {
-        buffer.writeln('🟢 *SOBRANTE:* +\$${diff.toStringAsFixed(2)}');
+        buffer.writeln('🟢 *Sobrante:* +\$${diff.toStringAsFixed(2)}');
       } else {
-        buffer.writeln('🔴 *FALTANTE:* -\$${diff.abs().toStringAsFixed(2)}');
+        buffer.writeln('🔴 *Faltante:* -\$${diff.abs().toStringAsFixed(2)}');
       }
     }
     
     buffer.writeln('----------------------------------');
     buffer.writeln('💳 *Tarjeta:* \$${corte.cardSales.toStringAsFixed(2)}');
     buffer.writeln('📱 *Transferencia:* \$${corte.transferSales.toStringAsFixed(2)}');
-    buffer.writeln('⭐ *VENTA TOTAL:* \$${corte.totalSales.toStringAsFixed(2)}');
+    buffer.writeln('⭐ *Venta total:* \$${corte.totalSales.toStringAsFixed(2)}');
 
     if (corte.movimientos.isNotEmpty) {
       buffer.writeln('----------------------------------');
@@ -150,7 +150,7 @@ class ExportService {
     final transfer = sales.where((s) => s.paymentMethod == 'Transferencia').fold<double>(0.0, (sum, s) => sum + s.total);
 
     final buffer = StringBuffer();
-    buffer.writeln('🍔 *TEXAS BURGER - REPORTE DE VENTAS* 🍔');
+    buffer.writeln('🍔 *TEXAS BURGER - reporte de ventas* 🍔');
     buffer.writeln('📅 Periodo: $periodName (${dateFormat.format(DateTime.now())})');
     buffer.writeln('🧾 Total de tickets: ${sales.length}');
     buffer.writeln('----------------------------------');
@@ -158,7 +158,7 @@ class ExportService {
     buffer.writeln('💳 Tarjeta: \$${card.toStringAsFixed(2)}');
     buffer.writeln('📱 Transferencia: \$${transfer.toStringAsFixed(2)}');
     buffer.writeln('----------------------------------');
-    buffer.writeln('💰 *VENTA TOTAL:* \$${total.toStringAsFixed(2)}');
+    buffer.writeln('💰 *Venta total:* \$${total.toStringAsFixed(2)}');
 
     if (sales.isNotEmpty) {
       final saleDate = DateFormat('dd/MM/yyyy');

@@ -84,7 +84,7 @@ class _CajaScreenState extends State<CajaScreen> {
     } catch (e) {
       if (mounted) {
         await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-          title: const Text('Revisar Caja'),
+          title: const Text('Revisar caja'),
           content: Text(e is StateError ? e.message.toString() : 'No se pudo completar la operación de Caja.'),
           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Aceptar'))],
         ));
@@ -781,7 +781,7 @@ class _CajaScreenState extends State<CajaScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('${c.ordersCount} órdenes', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                              Text('Venta Total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary)),
+                              Text('Venta total: \$${c.totalSales.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primary)),
                             ],
                           ),
                           const Divider(height: 16),

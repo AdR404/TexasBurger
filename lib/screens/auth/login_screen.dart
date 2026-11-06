@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/app_auth_service.dart';
 import '../../theme/app_theme.dart';
-import '../home_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -60,24 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
     } else {
       setState(() {
         _errorMessage = result.message ?? 'Error al iniciar sesión.';
       });
     }
-  }
-
-  void _fillCredentials(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-      _errorMessage = null;
-    });
   }
 
   @override
@@ -104,7 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.borderLight, width: 1.5),
+                        border: Border.all(
+                          color: AppTheme.borderLight,
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.06),
@@ -178,7 +167,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Banner de error si existe
-                            if (_errorMessage != null) ...[
+                            if (_errorMessage != null ||
+                                _authService.message != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
@@ -188,7 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: AppTheme.dangerSoft,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: AppTheme.danger.withValues(alpha: 0.3),
+                                    color: AppTheme.danger.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -201,7 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        _errorMessage!,
+                                        (_errorMessage ??
+                                            _authService.message)!,
                                         style: const TextStyle(
                                           color: AppTheme.danger,
                                           fontSize: 13,
@@ -217,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             // Campo de Correo / Usuario
                             const Text(
-                              'Correo o Usuario',
+                              'Correo electrónico',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
@@ -271,7 +264,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Por favor ingresa tu correo o usuario.';
+                                  return 'Por favor ingresa tu correo electrónico.';
+                                }
+                                if (!value.contains('@')) {
+                                  return 'Ingresa un correo electrónico válido.';
                                 }
                                 return null;
                               },
@@ -365,7 +361,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const ForgotPasswordScreen(),
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
                                     ),
                                   );
                                 },
@@ -442,95 +439,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
 
                   const SizedBox(height: 20),
-
-                  // Acceso rápido de prueba / demo
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.gold.withValues(alpha: 0.6),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.speed_rounded,
-                              size: 16,
-                              color: AppTheme.goldDark,
-                            ),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Acceso rápido de prueba (Demo)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.goldDark,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            ActionChip(
-                              avatar: const Icon(
-                                Icons.admin_panel_settings,
-                                size: 16,
-                                color: AppTheme.navyBlue,
-                              ),
-                              label: const Text(
-                                'Admin (demo)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              backgroundColor: AppTheme.goldLight,
-                              side: const BorderSide(color: AppTheme.gold),
-                              onPressed: () => _fillCredentials(
-                                'admin@texasburger.com',
-                                'admin123',
-                              ),
-                            ),
-                            ActionChip(
-                              avatar: const Icon(
-                                Icons.point_of_sale,
-                                size: 16,
-                                color: AppTheme.navyBlue,
-                              ),
-                              label: const Text(
-                                'Cajero (demo)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              backgroundColor: AppTheme.primarySoft,
-                              side: const BorderSide(
-                                color: AppTheme.navyBlueLight,
-                              ),
-                              onPressed: () => _fillCredentials(
-                                'cajero@texasburger.com',
-                                'caja123',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -540,4 +448,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

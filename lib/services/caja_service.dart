@@ -6,6 +6,7 @@ import '../models/venta.dart';
 import '../models/sale_context.dart';
 import 'user_role_service.dart';
 import 'db_service.dart';
+import 'app_auth_service.dart';
 import 'caja_repository.dart';
 
 class CajaService extends ChangeNotifier {
@@ -28,21 +29,51 @@ class CajaService extends ChangeNotifier {
   String? remoteError;
   bool remoteBusy = false;
   int _remoteRevision = 0;
-  bool get remoteMode => !_testLocal && DbService.onlineSalesEnabled && DbService.isSyncEnabled;
+  bool get remoteMode =>
+      !_testLocal && DbService.onlineSalesEnabled && DbService.isSyncEnabled;
   bool get remoteReady => _validSnapshot;
-  bool get _validSnapshot => _snapshot != null &&
-      _snapshotActor == DbService.session?.validOperatorId && _snapshotActor != null;
+  bool get _validSnapshot =>
+      _snapshot != null &&
+      _snapshotActor == DbService.session?.validOperatorId &&
+      _snapshotActor != null;
 
   void invalidateRemote() {
     _remoteRevision++;
     _snapshot = null;
     _snapshotActor = null;
     remoteError = null;
-    if (!remoteMode && _activeCorte != null && !_activeCorte!.isClosed &&
+    if (!remoteMode &&
+        _activeCorte != null &&
+        !_activeCorte!.isClosed &&
         _activeCorte!.openingContext != null &&
         _saleContext?.branchId != _activeCorte!.openingContext!.branchId) {
-      _saleContext = _activeCorte!.openingContext;
+      final user = AppAuthService().currentUser;
+      final opening = _activeCorte!.openingContext!;
+      if (user != null &&
+          AppAuthService().branches.containsKey(opening.branchId)) {
+        _saleContext = SaleContext(
+          branchId: opening.branchId,
+          branchName: opening.branchName,
+          employeeId: user.employeeId,
+          employeeName: user.employeeName,
+        );
+      }
     }
+    notifyListeners();
+  }
+
+  // Clear only operational identity/cache, never historical sales or local shifts.
+  void clearOperatorContext() {
+    _remoteRevision++;
+    _snapshot = null;
+    _snapshotActor = null;
+    _saleContext = null;
+    remoteError = null;
+    notifyListeners();
+  }
+
+  void setOperatorContext(SaleContext context) {
+    _saleContext = context;
     notifyListeners();
   }
 
@@ -56,9 +87,16 @@ class CajaService extends ChangeNotifier {
     try {
       final actor = DbService.session?.validOperatorId;
       final branch = _saleContext?.branchId;
-      if (branch == null) throw StateError('Selecciona sucursal y empleado para consultar Caja.');
+      if (branch == null) {
+        throw StateError('Selecciona una sucursal para consultar Caja.');
+      }
       final snapshot = await _remote.load(branch);
-      if (revision != _remoteRevision || !remoteMode || branch != _saleContext?.branchId || actor != DbService.session?.validOperatorId) return;
+      if (revision != _remoteRevision ||
+          !remoteMode ||
+          branch != _saleContext?.branchId ||
+          actor != DbService.session?.validOperatorId) {
+        return;
+      }
       _snapshot = snapshot;
       _snapshotActor = actor;
     } catch (e) {
@@ -74,7 +112,9 @@ class CajaService extends ChangeNotifier {
       : 'No se pudo consultar u operar Caja remota. Revisa conexión, sesión y permisos. No se utilizaron importes locales.';
 
   Future<T> _remoteOperation<T>(Future<T> Function() operation) async {
-    if (remoteBusy) throw StateError('Espera a que termine la operación de Caja.');
+    if (remoteBusy) {
+      throw StateError('Espera a que termine la operación de Caja.');
+    }
     remoteBusy = true;
     remoteError = null;
     notifyListeners();
@@ -94,21 +134,29 @@ class CajaService extends ChangeNotifier {
     try {
       final actor = DbService.session?.validOperatorId;
       final snapshot = await _remote.load(branch);
-      if (!remoteMode || branch != _saleContext?.branchId || actor != DbService.session?.validOperatorId) throw StateError('Cambió la sesión o sucursal');
+      if (!remoteMode ||
+          branch != _saleContext?.branchId ||
+          actor != DbService.session?.validOperatorId) {
+        throw StateError('Cambió la sesión o sucursal');
+      }
       _snapshot = snapshot;
       _snapshotActor = actor;
     } catch (_) {
-      throw StateError('La operación fue confirmada por Supabase, pero no se pudo actualizar Caja. No repitas la operación; pulsa Actualizar.');
+      throw StateError(
+        'La operación fue confirmada por Supabase, pero no se pudo actualizar Caja. No repitas la operación; pulsa Actualizar.',
+      );
     }
   }
 
-  Future<CorteCaja> remoteClosedDetails(CorteCaja turn) => _remote.closed(int.parse(turn.id), turn.openingContext!.branchId);
+  Future<CorteCaja> remoteClosedDetails(CorteCaja turn) =>
+      _remote.closed(int.parse(turn.id), turn.openingContext!.branchId);
 
   SaleContext? get saleContext => _saleContext;
   bool get isBranchLocked => isCajaOpen && _saleContext != null;
 
   bool get isCajaOpen => activeCorte != null && !activeCorte!.isClosed;
-  CorteCaja? get activeCorte => remoteMode ? (_validSnapshot ? _snapshot!.active : null) : _activeCorte;
+  CorteCaja? get activeCorte =>
+      remoteMode ? (_validSnapshot ? _snapshot!.active : null) : _activeCorte;
   List<CorteCaja> get cortesHistory => remoteMode
       ? (_validSnapshot ? List.unmodifiable(_snapshot!.history) : const [])
       : List.unmodifiable(_cortesHistory);
@@ -120,7 +168,9 @@ class CajaService extends ChangeNotifier {
     final contextString = prefs.getString('texas_staff_context');
     if (contextString != null) {
       try {
-        _saleContext = SaleContext.fromJson(jsonDecode(contextString) as Map<String, dynamic>);
+        _saleContext = SaleContext.fromJson(
+          jsonDecode(contextString) as Map<String, dynamic>,
+        );
       } catch (_) {
         _saleContext = null;
       }
@@ -129,7 +179,9 @@ class CajaService extends ChangeNotifier {
     final activeString = prefs.getString('texas_active_corte');
     if (activeString != null && activeString.isNotEmpty) {
       try {
-        _activeCorte = CorteCaja.fromJson(jsonDecode(activeString) as Map<String, dynamic>);
+        _activeCorte = CorteCaja.fromJson(
+          jsonDecode(activeString) as Map<String, dynamic>,
+        );
       } catch (e) {
         _activeCorte = null;
       }
@@ -139,7 +191,9 @@ class CajaService extends ChangeNotifier {
     if (historyString != null && historyString.isNotEmpty) {
       try {
         final List<dynamic> list = jsonDecode(historyString);
-        _cortesHistory = list.map((item) => CorteCaja.fromJson(item as Map<String, dynamic>)).toList();
+        _cortesHistory = list
+            .map((item) => CorteCaja.fromJson(item as Map<String, dynamic>))
+            .toList();
         _cortesHistory.sort((a, b) => b.openedAt.compareTo(a.openedAt));
       } catch (e) {
         _cortesHistory = [];
@@ -150,7 +204,8 @@ class CajaService extends ChangeNotifier {
     // Si hay un turno abierto sin selección activa en memoria, recupera la del inicio del turno
     if (!remoteMode && _activeCorte != null && !_activeCorte!.isClosed) {
       final opening = _activeCorte!.openingContext;
-      if (_saleContext == null || (opening != null && _saleContext!.branchId != opening.branchId)) {
+      if (_saleContext == null ||
+          (opening != null && _saleContext!.branchId != opening.branchId)) {
         _saleContext = opening;
       }
     }
@@ -160,21 +215,42 @@ class CajaService extends ChangeNotifier {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     if (_saleContext != null) {
-      await prefs.setString('texas_staff_context', jsonEncode(_saleContext!.toJson()));
+      await prefs.setString(
+        'texas_staff_context',
+        jsonEncode(_saleContext!.toJson()),
+      );
     } else {
       await prefs.remove('texas_staff_context');
     }
     if (_activeCorte != null) {
-      await prefs.setString('texas_active_corte', jsonEncode(_activeCorte!.toJson()));
+      await prefs.setString(
+        'texas_active_corte',
+        jsonEncode(_activeCorte!.toJson()),
+      );
     } else {
       await prefs.remove('texas_active_corte');
     }
 
-    final historyJson = jsonEncode(_cortesHistory.map((c) => c.toJson()).toList());
+    final historyJson = jsonEncode(
+      _cortesHistory.map((c) => c.toJson()).toList(),
+    );
     await prefs.setString('texas_cortes_history', historyJson);
   }
 
   Future<void> updateSaleContext(SaleContext selection) async {
+    if (remoteBusy) {
+      throw StateError('Espera a que termine la operación de Caja antes de cambiar la sucursal.');
+    }
+    if (!_testLocal) {
+      final auth = AppAuthService();
+      final user = auth.currentUser;
+      if (user == null ||
+          selection.employeeId != user.employeeId ||
+          selection.employeeName != user.employeeName ||
+          auth.branches[selection.branchId] != selection.branchName) {
+        throw StateError('La selección no corresponde al perfil autenticado.');
+      }
+    }
     if (isBranchLocked && selection.branchId != _saleContext!.branchId) {
       throw StateError('La sucursal se conserva hasta cerrar el turno.');
     }
@@ -185,13 +261,31 @@ class CajaService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> abrirCaja(double initialCash, {required SaleContext saleContext}) async {
+  Future<void> abrirCaja(
+    double initialCash, {
+    required SaleContext saleContext,
+  }) async {
     UserRoleService().requireAdmin();
+    if (!_testLocal) {
+      final auth = AppAuthService();
+      final user = auth.currentUser;
+      if (user == null || saleContext.employeeId != user.employeeId ||
+          saleContext.employeeName != user.employeeName ||
+          auth.branches[saleContext.branchId] != saleContext.branchName ||
+          _saleContext?.branchId != saleContext.branchId) {
+        throw StateError('Cambió el empleado o la sucursal. Abre nuevamente el formulario de Caja.');
+      }
+    }
     if (remoteMode) {
       await _remoteOperation(() async {
         final prefs = await SharedPreferences.getInstance();
         // Persist only the selection, never remote shifts as local shifts.
-        if (!await prefs.setString('texas_staff_context', jsonEncode(saleContext.toJson()))) throw StateError('No se pudo conservar la selección de sucursal.');
+        if (!await prefs.setString(
+          'texas_staff_context',
+          jsonEncode(saleContext.toJson()),
+        )) {
+          throw StateError('No se pudo conservar la selección de sucursal.');
+        }
         _saleContext = saleContext;
         await _remote.open(saleContext, initialCash);
         await _reloadConfirmed(saleContext.branchId);
@@ -221,7 +315,9 @@ class CajaService extends ChangeNotifier {
     UserRoleService().requireAdmin();
     if (remoteMode) {
       final turn = activeCorte;
-      if (turn == null || remoteError != null) throw StateError('Actualiza Caja antes de registrar un movimiento.');
+      if (turn == null || remoteError != null) {
+        throw StateError('Actualiza Caja antes de registrar un movimiento.');
+      }
       await _remoteOperation(() async {
         await _remote.movement(turn, type, amount, concept);
         await _reloadConfirmed(turn.openingContext!.branchId);
@@ -238,7 +334,8 @@ class CajaService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    final updatedMovs = List<CajaMovimiento>.from(_activeCorte!.movimientos)..add(newMov);
+    final updatedMovs = List<CajaMovimiento>.from(_activeCorte!.movimientos)
+      ..add(newMov);
     double newCashIn = _activeCorte!.cashIn;
     double newCashOut = _activeCorte!.cashOut;
 
@@ -260,7 +357,11 @@ class CajaService extends ChangeNotifier {
       transferSales: _activeCorte!.transferSales,
       totalSales: _activeCorte!.totalSales,
       ordersCount: _activeCorte!.ordersCount,
-      expectedCash: _activeCorte!.initialCash + newCashIn - newCashOut + _activeCorte!.cashSales,
+      expectedCash:
+          _activeCorte!.initialCash +
+          newCashIn -
+          newCashOut +
+          _activeCorte!.cashSales,
       movimientos: updatedMovs,
       notes: _activeCorte!.notes,
       isClosed: false,
@@ -272,7 +373,13 @@ class CajaService extends ChangeNotifier {
 
   CorteCaja computeLiveShift(List<Venta> allSales) {
     if (remoteMode) {
-      return activeCorte ?? CorteCaja(id: 'none', openedAt: DateTime.now(), initialCash: 0, expectedCash: 0);
+      return activeCorte ??
+          CorteCaja(
+            id: 'none',
+            openedAt: DateTime.now(),
+            initialCash: 0,
+            expectedCash: 0,
+          );
     }
     if (_activeCorte == null) {
       return CorteCaja(
@@ -284,7 +391,9 @@ class CajaService extends ChangeNotifier {
     }
 
     // Filter sales since caja was opened
-    final shiftSales = allSales.where((s) => s.timestamp.isAfter(_activeCorte!.openedAt)).toList();
+    final shiftSales = allSales
+        .where((s) => s.timestamp.isAfter(_activeCorte!.openedAt))
+        .toList();
 
     double cashSales = 0.0;
     double cardSales = 0.0;
@@ -301,7 +410,11 @@ class CajaService extends ChangeNotifier {
     }
 
     final totalSales = cashSales + cardSales + transferSales;
-    final expectedCash = _activeCorte!.initialCash + _activeCorte!.cashIn - _activeCorte!.cashOut + cashSales;
+    final expectedCash =
+        _activeCorte!.initialCash +
+        _activeCorte!.cashIn -
+        _activeCorte!.cashOut +
+        cashSales;
 
     return CorteCaja(
       id: _activeCorte!.id,
@@ -331,14 +444,18 @@ class CajaService extends ChangeNotifier {
     UserRoleService().requireAdmin();
     if (remoteMode) {
       final turn = activeCorte;
-      if (turn == null || remoteError != null) throw StateError('Actualiza Caja antes de cerrar el turno.');
+      if (turn == null || remoteError != null) {
+        throw StateError('Actualiza Caja antes de cerrar el turno.');
+      }
       return _remoteOperation(() async {
         final id = await _remote.close(turn, actualCashCounted, notes);
         CorteCaja closed;
         try {
           closed = await _remote.closed(id, turn.openingContext!.branchId);
         } catch (_) {
-          throw StateError('Cierre confirmado, pero no se pudo recuperar el corte. No repitas el cierre; actualiza Caja.');
+          throw StateError(
+            'Cierre confirmado, pero no se pudo recuperar el corte. No repitas el cierre; actualiza Caja.',
+          );
         }
         await _reloadConfirmed(turn.openingContext!.branchId);
         return closed;

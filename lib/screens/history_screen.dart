@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/sale_history_list.dart';
 import '../widgets/export_dialog.dart';
 import '../services/db_service.dart';
+import '../services/app_auth_service.dart';
 import '../widgets/remote_sale_history.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -57,7 +58,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
     final allSales = _salesService.sales;
 
+    final user = AppAuthService().currentUser;
     final filteredSales = allSales.where((sale) {
+      if (user == null ||
+          (!user.isAdmin && sale.saleContext?.branchId != user.branchId)) {
+        return false;
+      }
       if (_selectedDate != null) {
         if (!DateUtils.isSameDay(sale.timestamp, _selectedDate!)) {
           return false;
@@ -65,20 +71,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
       if (_searchFilter.isNotEmpty) {
         final q = _searchFilter.toLowerCase();
-        final matchTicket = '#${sale.ticketNumber}'.contains(q) || '${sale.ticketNumber}'.contains(q);
+        final matchTicket =
+            '#${sale.ticketNumber}'.contains(q) ||
+            '${sale.ticketNumber}'.contains(q);
         final matchMethod = sale.paymentMethod.toLowerCase().contains(q);
         final matchOrderType = sale.orderType.toLowerCase().contains(q);
-        final matchCustomer = (sale.customerName ?? '').toLowerCase().contains(q);
-        final matchProducts = sale.items.any((i) => i.product.name.toLowerCase().contains(q));
-        final matchStaff = sale.branchName.toLowerCase().contains(q) ||
+        final matchCustomer = (sale.customerName ?? '').toLowerCase().contains(
+          q,
+        );
+        final matchProducts = sale.items.any(
+          (i) => i.product.name.toLowerCase().contains(q),
+        );
+        final matchStaff =
+            sale.branchName.toLowerCase().contains(q) ||
             sale.employeeName.toLowerCase().contains(q) ||
             sale.companyName.toLowerCase().contains(q);
-        return matchTicket || matchMethod || matchOrderType || matchCustomer || matchProducts || matchStaff;
+        return matchTicket ||
+            matchMethod ||
+            matchOrderType ||
+            matchCustomer ||
+            matchProducts ||
+            matchStaff;
       }
       return true;
     }).toList();
 
-    final totalAmount = filteredSales.fold<double>(0.0, (sum, s) => sum + s.total);
+    final totalAmount = filteredSales.fold<double>(
+      0.0,
+      (sum, s) => sum + s.total,
+    );
 
     return Scaffold(
       body: Column(
@@ -94,9 +115,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: TextField(
                         onChanged: (val) => setState(() => _searchFilter = val),
                         decoration: InputDecoration(
-                          hintText: 'Ticket, cliente, producto, sucursal o empleado...',
-                          prefixIcon: const Icon(Icons.search, color: AppTheme.navyBlue),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          hintText:
+                              'Ticket, cliente, producto, sucursal o empleado...',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppTheme.navyBlue,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           filled: true,
                           fillColor: AppTheme.creamBg,
                           border: OutlineInputBorder(
@@ -109,8 +137,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
-                        _selectedDate == null ? Icons.calendar_today_outlined : Icons.calendar_month,
-                        color: _selectedDate == null ? AppTheme.navyBlue : AppTheme.infoBlue,
+                        _selectedDate == null
+                            ? Icons.calendar_today_outlined
+                            : Icons.calendar_month,
+                        color: _selectedDate == null
+                            ? AppTheme.navyBlue
+                            : AppTheme.infoBlue,
                       ),
                       tooltip: 'Filtrar por fecha',
                       visualDensity: VisualDensity.compact,
@@ -133,7 +165,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         onPressed: () => setState(() => _selectedDate = null),
                       ),
                     IconButton(
-                      icon: const Icon(Icons.file_download_outlined, color: AppTheme.primary),
+                      icon: const Icon(
+                        Icons.file_download_outlined,
+                        color: AppTheme.primary,
+                      ),
                       tooltip: 'Exportar a CSV o WhatsApp',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _showExportDialog(filteredSales),
@@ -146,14 +181,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Expanded(
                       child: Text(
                         '${filteredSales.length} ventas encontradas',
-                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
                       'Total: \$${totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w900),
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),

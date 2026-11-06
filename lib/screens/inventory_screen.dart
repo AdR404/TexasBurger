@@ -5,8 +5,7 @@ import '../services/inventory_repository.dart';
 import '../services/db_service.dart';
 import '../services/caja_service.dart';
 import '../services/operator_session.dart';
-import '../data/staff_catalog.dart';
-import '../widgets/operator_access_card.dart';
+import '../widgets/staff_context_selector.dart';
 import '../theme/app_theme.dart';
 import '../data/ingredient_catalog.dart';
 import '../widgets/add_inventory_lot_sheet.dart';
@@ -54,14 +53,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _session = DbService.session;
     _actor = _repository.operatorId;
     _session?.addListener(_sessionChanged);
+    CajaService().addListener(_branchChanged);
     _load();
   }
 
   @override
   void dispose() {
     _session?.removeListener(_sessionChanged);
+    CajaService().removeListener(_branchChanged);
     _revision++;
     super.dispose();
+  }
+
+  void _branchChanged() {
+    final branch = CajaService().saleContext?.branchId;
+    if (_branch == branch) return;
+    _branch = branch;
+    if (!_demoMode) _load();
   }
 
   void _sessionChanged() {
@@ -380,28 +388,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           const SizedBox(height: 24),
 
           if (!_demoMode) ...[
-            const OperatorAccessCard(
-              contextMessage:
-                  'Inventario: inicia sesión con la cuenta autorizada en Supabase. El rol local no concede permisos remotos.',
-            ),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_branch),
-              initialValue: _branch,
-              decoration: const InputDecoration(
-                labelText: 'Sucursal de inventario',
-              ),
-              items: StaffCatalog.branches.entries
-                  .map(
-                    (b) => DropdownMenuItem(value: b.key, child: Text(b.value)),
-                  )
-                  .toList(),
-              onChanged: _working
-                  ? null
-                  : (value) {
-                      setState(() => _branch = value);
-                      _load();
-                    },
-            ),
+            StaffContextBar(enabled: !_working && !_loading),
             if (_loading) const LinearProgressIndicator(),
             if (_error != null)
               Text(_error!, style: const TextStyle(color: AppTheme.danger)),

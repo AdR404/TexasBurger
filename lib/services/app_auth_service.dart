@@ -1,464 +1,474 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'user_role_service.dart';
+import '../models/sale_context.dart';
+import 'caja_service.dart';
 
-/// Modelo de usuario autenticado en Texas Burger.
 class AuthUser {
-  final String id;
-  final String email;
-  final String name;
-  final String role; // 'cajero' | 'admin'
-  final String? branchId;
-  final String? branchName;
-
   const AuthUser({
     required this.id,
     required this.email,
     required this.name,
     required this.role,
+    required this.businessId,
+    required this.employeeId,
+    required this.employeeName,
     this.branchId,
     this.branchName,
   });
+  final String id, email, name, role, employeeId, employeeName;
+  final int businessId;
+  final String? branchId, branchName;
+  bool get isAdmin => role == 'admin';
+  bool get isCajero => role == 'cajero';
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
-  bool get isCajero => role.toLowerCase() == 'cajero';
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'email': email,
-    'name': name,
-    'role': role,
-    'branchId': branchId,
-    'branchName': branchName,
-  };
-
-  factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-    id: json['id'] as String,
-    email: json['email'] as String,
-    name: json['name'] as String,
-    role: json['role'] as String? ?? 'cajero',
-    branchId: json['branchId'] as String?,
-    branchName: json['branchName'] as String?,
-  );
+  factory AuthUser.fromProfile(
+    String uid,
+    String email,
+    Map<String, dynamic> p,
+  ) {
+    final role = p['rol'];
+    if (p['usuario_id'] is! int ||
+        p['activo'] != true ||
+        p['empleado_activo'] != true ||
+        p['empleado_es_demo'] != false ||
+        p['empleado_pos_id'] is! String ||
+        (p['empleado_pos_id'] as String).trim().isEmpty ||
+        p['empleado_nombre'] is! String ||
+        (p['empleado_nombre'] as String).trim().isEmpty ||
+        !['admin', 'cajero'].contains(role) ||
+        (role == 'admin' && p['administrador_efectivo'] != true) ||
+        (role == 'cajero' && p['sucursal_id'] == null) ||
+        (p['sucursal_id'] != null &&
+            (p['sucursal_activa'] != true ||
+                p['sucursal_nombre'] is! String))) {
+      throw StateError(
+        'La cuenta no tiene un perfil operativo habilitado. Solicita al administrador revisar usuario, empleado y sucursal.',
+      );
+    }
+    return AuthUser(
+      id: uid,
+      email: email,
+      name: p['nombre'] as String? ?? '',
+      role: role as String,
+      businessId: p['usuario_id'] as int,
+      employeeId: p['empleado_pos_id'] as String,
+      employeeName: p['empleado_nombre'] as String,
+      branchId: p['sucursal_id'] as String?,
+      branchName: p['sucursal_nombre'] as String?,
+    );
+  }
 }
 
-/// Resultado de operaciones de autenticación.
 class AuthResult {
+  const AuthResult({required this.success, this.message, this.user});
   final bool success;
   final String? message;
   final AuthUser? user;
-
-  const AuthResult({required this.success, this.message, this.user});
-
   factory AuthResult.ok(AuthUser user, [String? message]) =>
       AuthResult(success: true, user: user, message: message);
-
   factory AuthResult.fail(String message) =>
       AuthResult(success: false, message: message);
 }
 
-/// Servicio central de autenticación de Texas Burger.
-///
-/// Encapsula la lógica de sesión, roles de usuario y las conexiones preparadas
-/// para Supabase Auth. Cuenta con soporte de demostración/desarrollo local
-/// para no bloquear el frontend mientras el backend configura los usuarios en Supabase.
+/// The SDK owns token persistence. Profiles are always read from the authenticated RPC.
 class AppAuthService extends ChangeNotifier {
   static final AppAuthService _instance = AppAuthService._internal();
   factory AppAuthService() => _instance;
   AppAuthService._internal();
+  SupabaseClient? _client;
+  SharedPreferences? _prefs;
+  StreamSubscription<AuthState>? _subscription;
+  Timer? _expiry;
+  AuthUser? _user;
+  bool _loading = false;
+  bool _signingIn = false;
+  bool _recovering = false;
+  bool _registering = false;
+  bool get isRecoveringPassword => _recovering;
+  bool get isRegistering => _registering;
+  String get authRedirect => kIsWeb
+      ? Uri.base.replace(query: '', fragment: '').toString()
+      : 'texasburger://auth/callback';
+  int _revision = 0;
+  String? message;
+  Map<String, String> _branches = {};
+  Map<String, String> get branches => Map.unmodifiable(_branches);
+  AuthUser? get currentUser => isAuthenticated ? _user : null;
+  bool get isAuthenticated =>
+      !_recovering &&
+      !_loading &&
+      _user != null &&
+      _client?.auth.currentSession?.isExpired == false &&
+      _client?.auth.currentUser?.id == _user!.id;
+  bool get isLoading => _loading;
+  bool get isAdmin => currentUser?.isAdmin ?? false;
+  String? get currentUserName => currentUser?.name;
+  String? get currentUserEmail => currentUser?.email;
+  String get currentUserRole => currentUser?.role ?? 'cajero';
 
-  static const String _userSessionPrefKey = 'texas_auth_current_user_v1';
-  static const String _customUsersPrefKey = 'texas_auth_registered_users_v1';
-
-  final UserRoleService _roleService = UserRoleService();
-
-  AuthUser? _currentUser;
-  bool _initialized = false;
-  bool _isLoading = false;
-
-  /// Controla si se permiten las credenciales de prueba predefinidas en desarrollo.
-  /// El equipo de backend puede cambiar esto a `false` una vez configurado Supabase Auth.
-  bool enableMockFallback = true;
-
-  AuthUser? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
-  bool get isLoading => _isLoading;
-  String? get currentUserName => _currentUser?.name;
-  String? get currentUserEmail => _currentUser?.email;
-  String get currentUserRole => _currentUser?.role ?? 'cajero';
-  bool get isAdmin => _currentUser?.isAdmin ?? false;
-
-  /// Acceso seguro al cliente Supabase si ya fue inicializado.
-  SupabaseClient? get _supabase {
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
+  Future<void> init({SupabaseClient? client}) async {
+    final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
+    // Remove only legacy mock identity/credentials; preserve sales and settings.
+    for (final key in [
+      'texas_auth_current_user_v1',
+      'texas_auth_registered_users_v1',
+      'texas_staff_context',
+    ]) {
+      if (!await prefs.remove(key)) {
+        throw StateError(
+          'No se pudieron limpiar los datos de la sesión anterior.',
+        );
+      }
     }
+    await _subscription?.cancel();
+    try {
+      _client = client ?? Supabase.instance.client;
+    } catch (_) {
+      _client = null;
+    }
+    _recovering =
+        _client?.auth.currentUser != null &&
+        prefs.getString('texas_password_recovery_uid') ==
+            _client!.auth.currentUser!.id;
+    _subscription = _client?.auth.onAuthStateChange.listen(
+      (event) {
+        if (event.event == AuthChangeEvent.passwordRecovery &&
+            event.session != null) {
+          _clear();
+          _recovering = true;
+          unawaited(_rememberRecovery(event.session!.user.id));
+          notifyListeners();
+          return;
+        }
+        if (_signingIn) return;
+        if (event.event == AuthChangeEvent.signedOut || event.session == null) {
+          _clear();
+        } else if (event.event == AuthChangeEvent.signedIn ||
+            event.event == AuthChangeEvent.tokenRefreshed ||
+            event.event == AuthChangeEvent.userUpdated) {
+          if (!_loading && !_recovering) unawaited(refresh());
+        }
+      },
+      onError: (Object _) {
+        _clear();
+        message =
+            'El enlace o la sesión no son válidos. Solicita otro enlace o inicia sesión con conexión.';
+        notifyListeners();
+      },
+    );
+    // A replayed recovery event must win over profile restoration.
+    await Future<void>.delayed(Duration.zero);
+    if (!_recovering) await refresh();
   }
 
-  /// Inicializa la sesión guardada si existe.
-  Future<void> init() async {
-    if (_initialized) return;
+  Future<void> _rememberRecovery(String uid) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(_userSessionPrefKey);
-      if (userJson != null) {
-        final decoded = jsonDecode(userJson) as Map<String, dynamic>;
-        _currentUser = AuthUser.fromJson(decoded);
-        _applyRole(_currentUser!.role);
+      if (await _prefs?.setString('texas_password_recovery_uid', uid) != true) {
+        throw StateError('No se pudo conservar el estado de recuperación.');
       }
-    } catch (e) {
-      debugPrint('Error al restaurar sesión previa: $e');
-    } finally {
-      _initialized = true;
+    } catch (_) {
+      await signOut();
+      message = 'No se pudo preparar la recuperación. Solicita otro enlace.';
       notifyListeners();
     }
   }
 
-  /// Inicia sesión con correo y contraseña.
-  ///
-  /// Conexión para backend:
-  /// Utiliza `_supabase.auth.signInWithPassword` si está disponible.
-  /// Si falla o está en modo offline/mock, evalúa credenciales demo predefinidas.
+  void _clear() {
+    _revision++;
+    _recovering = false;
+    _expiry?.cancel();
+    _user = null;
+    _branches = {};
+    _loading = false;
+    CajaService().clearOperatorContext();
+    notifyListeners();
+  }
+
+  Future<void> refresh() async {
+    if (_recovering) return;
+    final revision = ++_revision;
+    _loading = true;
+    notifyListeners();
+    try {
+      final client = _client;
+      final session = client?.auth.currentSession;
+      if (client == null || session == null) {
+        _clear();
+        return;
+      }
+      if (session.isExpired) {
+        await client.auth.refreshSession().timeout(const Duration(seconds: 15));
+      }
+      final identity = await client.auth.getUser().timeout(
+        const Duration(seconds: 15),
+      );
+      final rows = await client
+          .rpc('login_mi_perfil')
+          .retry(enabled: false)
+          .timeout(const Duration(seconds: 15));
+      if (revision != _revision) return;
+      if (rows is! List ||
+          rows.length != 1 ||
+          identity.user?.id != client.auth.currentUser?.id) {
+        throw StateError(
+          'La cuenta no está habilitada para utilizar la aplicación. Solicita la vinculación de su perfil.',
+        );
+      }
+      final user = AuthUser.fromProfile(
+        identity.user!.id,
+        identity.user!.email ?? '',
+        Map<String, dynamic>.from(rows.single as Map),
+      );
+      final branches = await client
+          .from('sucursales')
+          .select('id,nombre')
+          .eq('empresa_id', SaleContext.texasBurgerId)
+          .eq('activo', true)
+          .retry(enabled: false)
+          .timeout(const Duration(seconds: 15));
+      if (revision != _revision) return;
+      final available = {
+        for (final b in branches) b['id'] as String: b['nombre'] as String,
+      };
+      if (available.isEmpty ||
+          (user.branchId != null && !available.containsKey(user.branchId))) {
+        throw StateError(
+          'No hay una sucursal activa disponible para esta cuenta.',
+        );
+      }
+      final previousBranch = _user?.id == user.id
+          ? CajaService().saleContext?.branchId
+          : null;
+      CajaService().clearOperatorContext();
+      _user = user;
+      _branches = user.branchId == null
+          ? available
+          : {user.branchId!: available[user.branchId]!};
+      final localShiftBranch =
+          !CajaService().remoteMode && CajaService().isCajaOpen
+          ? CajaService().activeCorte?.openingContext?.branchId
+          : null;
+      final selected =
+          user.branchId ??
+          (available.containsKey(localShiftBranch) ? localShiftBranch : null) ??
+          (available.containsKey(previousBranch) ? previousBranch : null);
+      if (selected != null) {
+        CajaService().setOperatorContext(
+          SaleContext(
+            branchId: selected,
+            branchName: available[selected]!,
+            employeeId: user.employeeId,
+            employeeName: user.employeeName,
+          ),
+        );
+      }
+      _loading = false;
+      message = null;
+      _expiry?.cancel();
+      final expires = client.auth.currentSession?.expiresAt;
+      if (expires != null) {
+        _expiry = Timer(
+          Duration(
+            seconds: (expires - DateTime.now().millisecondsSinceEpoch ~/ 1000)
+                .clamp(0, 86400),
+          ),
+          () => unawaited(refresh()),
+        );
+      }
+      notifyListeners();
+    } catch (error) {
+      if (revision != _revision) return;
+      _clear();
+      message = error is StateError
+          ? error.message.toString()
+          : 'No se pudo validar el acceso. Comprueba tu conexión e inicia sesión nuevamente.';
+      try {
+        await _client?.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {}
+      notifyListeners();
+    }
+  }
+
   Future<AuthResult> signIn({
     required String email,
     required String password,
   }) async {
-    _isLoading = true;
+    if (_signingIn) {
+      return AuthResult.fail('Espera a que termine el inicio de sesión.');
+    }
+    _signingIn = true;
+    _clear();
+    _loading = true;
     notifyListeners();
-
-    final cleanEmail = email.trim().toLowerCase();
-    final cleanPass = password.trim();
-
     try {
-      // 1. Intento con Supabase Auth si el cliente está disponible
-      final client = _supabase;
-      if (client != null) {
-        try {
-          final response = await client.auth.signInWithPassword(
-            email: cleanEmail,
-            password: cleanPass,
-          );
-
-          final user = response.user;
-          if (user != null) {
-            final metadata = user.userMetadata ?? {};
-            final role = (metadata['rol'] ?? metadata['role'] ?? 'cajero')
-                .toString();
-            final name =
-                (metadata['nombre'] ?? metadata['name'] ?? user.email ?? '')
-                    .toString();
-            final branchId = metadata['sucursal_id'] as String?;
-            final branchName = metadata['sucursal_nombre'] as String?;
-
-            final authUser = AuthUser(
-              id: user.id,
-              email: user.email ?? cleanEmail,
-              name: name.isNotEmpty ? name : 'Usuario',
-              role: role,
-              branchId: branchId,
-              branchName: branchName,
-            );
-
-            await _saveSession(authUser);
-            _applyRole(authUser.role);
-            return AuthResult.ok(authUser, 'Sesión iniciada con Supabase Auth');
-          }
-        } on AuthException catch (e) {
-          // Si Supabase responde credenciales inválidas y no usamos mock fallback, propagar error
-          if (!enableMockFallback) {
-            return AuthResult.fail(e.message);
-          }
-        } catch (e) {
-          debugPrint('Supabase Auth error o no disponible: $e');
-          if (!enableMockFallback) {
-            return AuthResult.fail('No se pudo conectar al servidor de autenticación: $e');
-          }
-        }
+      await _prefs?.remove('texas_password_recovery_uid');
+      final client = _client;
+      if (client == null) {
+        return AuthResult.fail(
+          'Supabase no está disponible. Reinicia con conexión.',
+        );
       }
-
-      // 2. Modo demostración / desarrollo local para pruebas del frontend
-      if (enableMockFallback) {
-        final mockUser = await _checkMockCredentials(cleanEmail, cleanPass);
-        if (mockUser != null) {
-          await _saveSession(mockUser);
-          _applyRole(mockUser.role);
-          return AuthResult.ok(mockUser, 'Sesión iniciada (Modo desarrollo)');
-        }
-      }
-
+      await client.auth
+          .signInWithPassword(email: email.trim(), password: password)
+          .timeout(const Duration(seconds: 20));
+      await refresh();
+      return isAuthenticated
+          ? AuthResult.ok(_user!)
+          : AuthResult.fail(message ?? 'Cuenta no habilitada.');
+    } catch (_) {
+      _clear();
+      try {
+        await _client?.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {}
       return AuthResult.fail(
-        'Credenciales incorrectas. Verifica tu correo y contraseña.',
+        'No se pudo iniciar sesión. Revisa correo, contraseña y conexión.',
       );
     } finally {
-      _isLoading = false;
+      _signingIn = false;
+      _loading = false;
       notifyListeners();
     }
   }
 
-  /// Registro de nuevos colaboradores realizado por un Administrador.
-  ///
-  /// Conexión para backend:
-  /// El backend puede implementar este método llamando a:
-  /// - Un Supabase Edge Function con Service Role (`admin.auth.admin.createUser`)
-  /// - O una función RPC postgres en Supabase que inserte en `auth.users` y `public.usuarios`
-  /// sin cerrar la sesión del admin actual.
+  Future<void> signOut() async {
+    _clear();
+    try {
+      await _client?.auth.signOut(scope: SignOutScope.local);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('texas_staff_context');
+      await prefs.remove('texas_password_recovery_uid');
+    } catch (_) {
+      message =
+          'Acceso bloqueado. No se pudo confirmar el cierre de sesión; vuelve a intentarlo con conexión.';
+    }
+    notifyListeners();
+  }
+
+  Future<List<AuthUser>> getRegisteredUsers() async => const [];
+
   Future<AuthResult> registerUser({
     required String name,
     required String email,
     required String password,
-    required String role, // 'cajero' | 'admin'
+    required String role,
     String? branchId,
     String? branchName,
   }) async {
-    _isLoading = true;
-    notifyListeners();
-
-    final cleanName = name.trim();
-    final cleanEmail = email.trim().toLowerCase();
-    final cleanPass = password.trim();
-    final cleanRole = role.trim().toLowerCase();
-
-    try {
-      // Validaciones básicas de frontend
-      if (cleanName.isEmpty) return AuthResult.fail('El nombre es obligatorio.');
-      if (!cleanEmail.contains('@') || !cleanEmail.contains('.')) {
-        return AuthResult.fail('Ingresa un correo electrónico válido.');
-      }
-      if (cleanPass.length < 6) {
-        return AuthResult.fail('La contraseña debe tener al menos 6 caracteres.');
-      }
-
-      // 1. Intento de llamada a Supabase (vía Edge Function o RPC si el backend la implementa)
-      final client = _supabase;
-      if (client != null && !enableMockFallback) {
-        try {
-          // NOTA PARA BACKEND:
-          // Invocación recomendada para registrar usuario sin perder la sesión del admin:
-          // final res = await client.functions.invoke('create-user', body: {
-          //   'email': cleanEmail,
-          //   'password': cleanPass,
-          //   'name': cleanName,
-          //   'role': cleanRole,
-          //   'branch_id': branchId,
-          // });
-          // return AuthResult.ok(...);
-        } catch (e) {
-          debugPrint('Error en registro remoto: $e');
-        }
-      }
-
-      // 2. Registro local/demo para pruebas de interfaz
-      final newUser = AuthUser(
-        id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-        email: cleanEmail,
-        name: cleanName,
-        role: cleanRole,
-        branchId: branchId,
-        branchName: branchName,
+    if (!isAdmin || _registering) {
+      return AuthResult.fail('Se requiere una sesión administrativa válida.');
+    }
+    if (name.trim().isEmpty ||
+        !email.contains('@') ||
+        password.length < 8 ||
+        !['admin', 'cajero'].contains(role) ||
+        (role == 'cajero' && branchId == null) ||
+        (branchId != null && !branches.containsKey(branchId))) {
+      return AuthResult.fail(
+        'Revisa nombre, correo, contraseña (8 caracteres), rol y sucursal.',
       );
-
-      await _saveCustomUser(newUser, cleanPass);
-      return AuthResult.ok(newUser, 'Usuario registrado con éxito.');
+    }
+    final actor = currentUser!.id;
+    _registering = true;
+    notifyListeners();
+    try {
+      final response = await _client!.functions
+          .invoke(
+            'admin-register-user',
+            body: {
+              'name': name.trim(),
+              'email': email.trim().toLowerCase(),
+              'password': password,
+              'role': role,
+              'branch_id': branchId,
+            },
+          )
+          .timeout(const Duration(seconds: 30));
+      if (currentUser?.id != actor) {
+        return AuthResult.fail(
+          'La sesión cambió durante el registro. Consulta al administrador antes de repetirlo.',
+        );
+      }
+      final data = response.data;
+      if (response.status == 200 &&
+          data is Map &&
+          data['state'] == 'pending_confirmation') {
+        // Deployed versions also use this state with success=false.
+        return const AuthResult(
+          success: true,
+          message:
+              'Usuario registrado correctamente. Se solicitó el envío del correo de confirmación. El empleado deberá confirmar su correo antes de iniciar sesión.',
+        );
+      }
+      if (response.status != 200 || data is! Map || data['success'] != true) {
+        return AuthResult.fail(
+          'No se confirmó el alta. Revisa el estado con el administrador antes de repetirla.',
+        );
+      }
+      return AuthResult(
+        success: true,
+        message:
+            data['message'] as String? ??
+            'Cuenta y empleado creados. Falta confirmar el correo.',
+      );
+    } on FunctionException catch (error) {
+      final data = error.details;
+      return AuthResult.fail(
+        data is Map && data['message'] is String
+            ? data['message'] as String
+            : 'No se pudo registrar. Comprueba el despliegue y los permisos.',
+      );
+    } catch (_) {
+      return AuthResult.fail(
+        'No se recibió confirmación. El alta podría haberse completado; verifica su estado antes de repetirla.',
+      );
     } finally {
-      _isLoading = false;
+      _registering = false;
       notifyListeners();
     }
   }
 
-  /// Solicitud de restablecimiento de contraseña.
-  ///
-  /// Conexión para backend:
-  /// Llama a `_supabase.auth.resetPasswordForEmail(email)`.
-  Future<AuthResult> sendPasswordResetEmail({required String email}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    final cleanEmail = email.trim().toLowerCase();
-
+  Future<AuthResult> updateRecoveredPassword(String password) async {
+    if (!_recovering || _client?.auth.currentSession == null) {
+      return AuthResult.fail('Solicita un enlace de recuperación nuevo.');
+    }
+    if (password.length < 8) {
+      return AuthResult.fail('Utiliza al menos 8 caracteres.');
+    }
     try {
-      if (!cleanEmail.contains('@') || !cleanEmail.contains('.')) {
-        return AuthResult.fail('Ingresa un correo electrónico válido.');
-      }
+      await _client!.auth.updateUser(UserAttributes(password: password));
+      // Keep recovery isolated from operational navigation until logout finishes.
+      await signOut();
+      message =
+          'Contraseña actualizada. Inicia sesión con tu nueva contraseña.';
+      notifyListeners();
+      return const AuthResult(success: true);
+    } on AuthException catch (error) {
+      return AuthResult.fail(error.message);
+    } catch (_) {
+      return AuthResult.fail(
+        'No se confirmó el cambio de contraseña. Comprueba tu conexión.',
+      );
+    }
+  }
 
-      final client = _supabase;
-      if (client != null) {
-        try {
-          await client.auth.resetPasswordForEmail(cleanEmail);
-          return const AuthResult(
-            success: true,
-            message:
-                'Hemos enviado un enlace de recuperación a tu correo electrónico.',
-          );
-        } catch (e) {
-          debugPrint('Supabase resetPassword error: $e');
-          if (!enableMockFallback) {
-            return AuthResult.fail(
-              'No se pudo enviar el correo de recuperación: $e',
-            );
-          }
-        }
-      }
-
-      // Simulación en modo desarrollo
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+  Future<AuthResult> sendPasswordResetEmail({required String email}) async {
+    try {
+      if (_client == null) throw StateError('Sin conexión');
+      await _client!.auth
+          .resetPasswordForEmail(email.trim(), redirectTo: authRedirect)
+          .timeout(const Duration(seconds: 15));
       return const AuthResult(
         success: true,
         message:
-            'Hemos enviado un enlace de recuperación a tu correo electrónico.',
+            'Si el correo corresponde a una cuenta, recibirás un enlace para cambiar tu contraseña.',
       );
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Cierra la sesión activa.
-  Future<void> signOut() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final client = _supabase;
-      if (client != null) {
-        try {
-          await client.auth.signOut();
-        } catch (e) {
-          debugPrint('Error en Supabase signOut: $e');
-        }
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_userSessionPrefKey);
-      _currentUser = null;
-      _roleService.switchToUser();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Obtiene la lista de usuarios registrados creados localmente durante pruebas.
-  Future<List<AuthUser>> getRegisteredUsers() async {
-    final list = <AuthUser>[
-      const AuthUser(
-        id: 'usr_admin_default',
-        email: 'admin@texasburger.com',
-        name: 'Administrador Texas',
-        role: 'admin',
-        branchId: 'norte',
-        branchName: 'Norte',
-      ),
-      const AuthUser(
-        id: 'usr_cajero_default',
-        email: 'cajero@texasburger.com',
-        name: 'Ana Torres (Cajera)',
-        role: 'cajero',
-        branchId: 'perimetral_sur',
-        branchName: 'Perimetral Sur',
-      ),
-    ];
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedJson = prefs.getString(_customUsersPrefKey);
-      if (storedJson != null) {
-        final List<dynamic> decoded = jsonDecode(storedJson) as List<dynamic>;
-        for (final item in decoded) {
-          final data = item as Map<String, dynamic>;
-          list.add(AuthUser.fromJson(data['user'] as Map<String, dynamic>));
-        }
-      }
-    } catch (e) {
-      debugPrint('Error al leer usuarios creados: $e');
-    }
-
-    return list;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Métodos auxiliares y sincronización de roles
-  // ---------------------------------------------------------------------------
-
-  void _applyRole(String role) {
-    if (role.toLowerCase() == 'admin') {
-      _roleService.loginAdmin('admin', 'admin');
-    } else {
-      _roleService.switchToUser();
-    }
-  }
-
-  Future<void> _saveSession(AuthUser user) async {
-    _currentUser = user;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userSessionPrefKey, jsonEncode(user.toJson()));
-  }
-
-  Future<void> _saveCustomUser(AuthUser user, String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedJson = prefs.getString(_customUsersPrefKey);
-    final List<dynamic> list = storedJson != null
-        ? jsonDecode(storedJson) as List<dynamic>
-        : [];
-
-    list.add({
-      'user': user.toJson(),
-      'password': password,
-    });
-
-    await prefs.setString(_customUsersPrefKey, jsonEncode(list));
-  }
-
-  Future<AuthUser?> _checkMockCredentials(String email, String password) async {
-    // 1. Usuarios demo preconfigurados
-    if ((email == 'admin@texasburger.com' || email == 'admin') &&
-        (password == 'admin123' || password == 'admin')) {
-      return const AuthUser(
-        id: 'usr_admin_demo',
-        email: 'admin@texasburger.com',
-        name: 'Administrador General',
-        role: 'admin',
-        branchId: 'norte',
-        branchName: 'Norte',
+    } catch (_) {
+      return AuthResult.fail(
+        'No se pudo solicitar la recuperación. Revisa la conexión e intenta nuevamente.',
       );
     }
-
-    if ((email == 'cajero@texasburger.com' || email == 'cajero') &&
-        (password == 'caja123' || password == 'caja')) {
-      return const AuthUser(
-        id: 'usr_cajero_demo',
-        email: 'cajero@texasburger.com',
-        name: 'Ana Torres',
-        role: 'cajero',
-        branchId: 'perimetral_sur',
-        branchName: 'Perimetral Sur',
-      );
-    }
-
-    // 2. Usuarios creados por el admin en la app
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedJson = prefs.getString(_customUsersPrefKey);
-      if (storedJson != null) {
-        final List<dynamic> list = jsonDecode(storedJson) as List<dynamic>;
-        for (final item in list) {
-          final map = item as Map<String, dynamic>;
-          final userMap = map['user'] as Map<String, dynamic>;
-          final storedEmail = (userMap['email'] as String).toLowerCase();
-          final storedPass = map['password'] as String;
-
-          if (storedEmail == email && storedPass == password) {
-            return AuthUser.fromJson(userMap);
-          }
-        }
-      }
-    } catch (_) {}
-
-    return null;
   }
 }
-

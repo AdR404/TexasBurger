@@ -15,6 +15,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _authService = AppAuthService();
 
   bool _isSent = false;
+  bool _sending = false;
   String? _errorMessage;
 
   @override
@@ -24,9 +25,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _handleReset() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_sending || !_formKey.currentState!.validate()) return;
 
     setState(() {
+      _sending = true;
       _errorMessage = null;
     });
 
@@ -36,6 +38,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (!mounted) return;
 
+    setState(() => _sending = false);
     if (result.success) {
       setState(() {
         _isSent = true;
@@ -248,7 +251,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ListenableBuilder(
             listenable: _authService,
             builder: (context, _) {
-              final loading = _authService.isLoading;
+              final loading = _sending;
               return ElevatedButton(
                 onPressed: loading ? null : _handleReset,
                 style: ElevatedButton.styleFrom(
@@ -334,7 +337,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 20),
 
         const Text(
-          '¡Enlace Enviado!',
+          'Solicitud enviada',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -355,7 +358,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             children: [
               const TextSpan(
-                text: 'Hemos enviado las instrucciones para restablecer tu contraseña a:\n',
+                text: 'Si existe una cuenta, recibirás un enlace en:\n',
               ),
               TextSpan(
                 text: _emailController.text.trim(),
@@ -383,7 +386,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Si no lo ves en unos minutos, revisa tu carpeta de spam o correo no deseado.',
+                  'Abre el enlace en este dispositivo y escribe tu nueva contraseña. Si el enlace caducó, solicita otro.',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.goldDark,
@@ -416,4 +419,3 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
-

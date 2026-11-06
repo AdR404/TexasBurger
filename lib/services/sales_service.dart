@@ -6,18 +6,23 @@ import '../models/venta_item.dart';
 import '../models/producto.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
+import 'app_auth_service.dart';
 import 'user_role_service.dart';
 
 class SalesService extends ChangeNotifier {
   static final SalesService _instance = SalesService._internal();
   factory SalesService() => _instance;
-  SalesService._internal() : _remoteWriter = DbService.guardarVenta;
+  SalesService._internal()
+    : _remoteWriter = DbService.guardarVenta,
+      _testLocal = false;
 
   @visibleForTesting
   SalesService.forTesting({required Future<void> Function(Venta) remoteWriter})
-    : _remoteWriter = remoteWriter;
+    : _remoteWriter = remoteWriter,
+      _testLocal = true;
 
   final Future<void> Function(Venta) _remoteWriter;
+  final bool _testLocal;
 
   List<Venta> _sales = [];
   int _lastTicketNumber = 1000;
@@ -98,6 +103,18 @@ class SalesService extends ChangeNotifier {
     String? customerPhone,
     String? deliveryAddress,
   }) => _serialize(() async {
+    if (!_testLocal) {
+      final auth = AppAuthService();
+      final user = auth.currentUser;
+      if (user == null ||
+          saleContext.employeeId != user.employeeId ||
+          saleContext.employeeName != user.employeeName ||
+          auth.branches[saleContext.branchId] != saleContext.branchName) {
+        throw StateError(
+          'La venta requiere el empleado y la sucursal de la sesion actual.',
+        );
+      }
+    }
     final newSale = Venta(
       id: 'txs_${DateTime.now().microsecondsSinceEpoch}_${_lastTicketNumber + 1}',
       ticketNumber: _lastTicketNumber + 1,
@@ -141,7 +158,9 @@ class SalesService extends ChangeNotifier {
     } catch (_) {
       if (DbService.onlineSalesEnabled && DbService.isSyncEnabled) {
         notifyListeners();
-        throw StateError('Venta registrada en Supabase, pero falló el historial local. No repitas el cobro.');
+        throw StateError(
+          'Venta registrada en Supabase, pero falló el historial local. No repitas el cobro.',
+        );
       }
       _sales.removeWhere((sale) => sale.id == newSale.id);
       rethrow;

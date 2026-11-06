@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../screens/auth/admin_register_user_screen.dart';
-import '../screens/auth/login_screen.dart';
 import '../services/app_auth_service.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
@@ -166,51 +165,6 @@ class UserSessionButton extends StatelessWidget {
                   const Divider(),
                 ],
 
-                // Alternar rol rápido (simulación)
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primarySoft,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.swap_horiz_rounded,
-                      color: AppTheme.navyBlue,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    isAdmin ? 'Cambiar a modo Cajero' : 'Cambiar a modo Admin',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  subtitle: Text(
-                    isAdmin
-                        ? 'Oculta paneles restringidos de administración'
-                        : 'Acceso temporal de administración',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    roleService.toggleRoleDirectly();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          roleService.isAdmin
-                              ? 'Modo Administrador activado.'
-                              : 'Modo Cajero activado.',
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-
-                const Divider(),
-
                 // Cerrar Sesión
                 ListTile(
                   leading: Container(
@@ -240,15 +194,6 @@ class UserSessionButton extends StatelessWidget {
                   onTap: () async {
                     Navigator.pop(bottomSheetCtx);
                     await authService.signOut();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    }
                   },
                 ),
               ],
@@ -291,11 +236,7 @@ class UserSessionButton extends StatelessWidget {
                     size: 18,
                   ),
                   SizedBox(width: 2),
-                  Icon(
-                    Icons.more_vert,
-                    color: Colors.white70,
-                    size: 14,
-                  ),
+                  Icon(Icons.more_vert, color: Colors.white70, size: 14),
                 ],
               ),
             ),
@@ -305,4 +246,3 @@ class UserSessionButton extends StatelessWidget {
     );
   }
 }
-

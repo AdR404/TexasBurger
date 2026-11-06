@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/staff_catalog.dart';
+import '../services/app_auth_service.dart';
 import '../models/sale_context.dart';
 import '../services/caja_service.dart';
 import '../theme/app_theme.dart';
@@ -28,13 +28,25 @@ class _StaffContextSelectorState extends State<StaffContextSelector> {
   @override
   void initState() {
     super.initState();
-    _branchId = widget.initialSelection?.branchId;
-    _employeeId = widget.initialSelection?.employeeId;
+    _branchId =
+        widget.initialSelection?.branchId ??
+        AppAuthService().currentUser?.branchId;
+    _employeeId = AppAuthService().currentUser?.employeeId;
   }
 
   void _notifySelection() {
     if (_branchId != null && _employeeId != null) {
-      widget.onChanged(StaffCatalog.selection(_branchId!, _employeeId!));
+      final auth = AppAuthService();
+      final user = auth.currentUser;
+      if (user == null || !auth.branches.containsKey(_branchId)) return;
+      widget.onChanged(
+        SaleContext(
+          branchId: _branchId!,
+          branchName: auth.branches[_branchId]!,
+          employeeId: user.employeeId,
+          employeeName: user.employeeName,
+        ),
+      );
     }
   }
 
@@ -53,13 +65,13 @@ class _StaffContextSelectorState extends State<StaffContextSelector> {
         initialValue: _branchId,
         isExpanded: true,
         decoration: const InputDecoration(labelText: 'Sucursal'),
-        items: StaffCatalog.branches.entries
+        items: AppAuthService().branches.entries
             .map(
               (entry) =>
                   DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             )
             .toList(),
-        onChanged: widget.lockBranch
+        onChanged: widget.lockBranch || !AppAuthService().isAdmin
             ? null
             : (value) {
                 setState(() => _branchId = value);
@@ -75,27 +87,12 @@ class _StaffContextSelectorState extends State<StaffContextSelector> {
           ),
         ),
       const SizedBox(height: 12),
-      DropdownButtonFormField<String>(
+      Text(
+        'Atiende: ${AppAuthService().currentUser?.employeeName ?? "Sesion no disponible"}',
         key: const ValueKey('staff-employee'),
-        initialValue: _employeeId,
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Empleado activo'),
-        items: StaffCatalog.employees.entries
-            .map(
-              (entry) =>
-                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            )
-            .toList(),
-        onChanged: (value) {
-          setState(() => _employeeId = value);
-          _notifySelection();
-        },
       ),
       const SizedBox(height: 8),
-      const Text(
-        'Empleados ficticios de demostración. Cambia el empleado cuando otra persona atienda.',
-        style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-      ),
+      const Text('El empleado corresponde a la cuenta autenticada.'),
     ],
   );
 }
@@ -106,7 +103,7 @@ Future<bool> selectStaffContext(BuildContext context, CajaService caja) async {
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Personal de turno'),
+        title: const Text('Sucursal operativa'),
         content: SingleChildScrollView(
           child: StaffContextSelector(
             initialSelection: caja.saleContext,
@@ -137,7 +134,7 @@ Future<bool> selectStaffContext(BuildContext context, CajaService caja) async {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudo guardar la selección del personal.'),
+          content: Text('No se pudo cambiar la sucursal. Comprueba que no haya un turno u operación en curso.'),
         ),
       );
     }
@@ -146,13 +143,14 @@ Future<bool> selectStaffContext(BuildContext context, CajaService caja) async {
 }
 
 class StaffContextBar extends StatelessWidget {
-  const StaffContextBar({super.key});
+  const StaffContextBar({super.key, this.enabled = true});
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final caja = CajaService();
     return ListenableBuilder(
-      listenable: caja,
+      listenable: Listenable.merge([caja, AppAuthService()]),
       builder: (context, _) {
         final selection = caja.saleContext;
         return Container(
@@ -172,17 +170,18 @@ class StaffContextBar extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  selection == null
-                      ? 'Personal: selecciona sucursal y empleado'
-                      : '${selection.branchName}\nAtiende: ${selection.employeeName}',
+                  'Empleado responsable: ${AppAuthService().currentUser?.employeeName ?? "Sesión no disponible"}\n'
+                  'Sucursal operativa: ${selection?.branchName ?? "Selecciona una sucursal"}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppTheme.navyBlue,
                   ),
                 ),
               ),
+              if (AppAuthService().isAdmin && AppAuthService().currentUser?.branchId == null)
               TextButton(
-                onPressed: () => selectStaffContext(context, caja),
+                onPressed: !enabled || caja.remoteBusy || caja.isBranchLocked
+                    ? null : () => selectStaffContext(context, caja),
                 child: Text(selection == null ? 'Seleccionar' : 'Cambiar'),
               ),
             ],

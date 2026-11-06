@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../data/staff_catalog.dart';
 import '../../services/app_auth_service.dart';
 import '../../services/user_role_service.dart';
 import '../../theme/app_theme.dart';
@@ -23,19 +22,10 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
   final _roleService = UserRoleService();
 
   String _selectedRole = 'cajero';
-  String _selectedBranchId = 'perimetral_sur';
+  String _selectedBranchId = '';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
-
-  List<AuthUser> _usersList = [];
-  bool _loadingUsers = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUsers();
-  }
 
   @override
   void dispose() {
@@ -46,75 +36,30 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUsers() async {
-    final list = await _authService.getRegisteredUsers();
-    if (mounted) {
-      setState(() {
-        _usersList = list;
-        _loadingUsers = false;
-      });
-    }
-  }
-
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() {
-        _errorMessage = 'Las contraseñas no coinciden.';
-      });
+    if (_authService.isRegistering || !_formKey.currentState!.validate()) {
       return;
     }
-
-    setState(() {
-      _errorMessage = null;
-    });
-
-    final branchName = StaffCatalog.branches[_selectedBranchId] ?? 'General';
-
+    setState(() => _errorMessage = null);
     final result = await _authService.registerUser(
       name: _nameController.text,
       email: _emailController.text,
       password: _passwordController.text,
       role: _selectedRole,
-      branchId: _selectedBranchId,
-      branchName: branchName,
+      branchId: _selectedBranchId.isEmpty ? null : _selectedBranchId,
     );
-
     if (!mounted) return;
-
-    if (result.success) {
-      // Limpiar formulario
-      _nameController.clear();
-      _emailController.clear();
-      _passwordController.clear();
-      _confirmPasswordController.clear();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppTheme.navyBlue,
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppTheme.gold),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '¡Colaborador "${result.user?.name}" registrado con éxito!',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      _loadUsers();
-    } else {
-      setState(() {
-        _errorMessage = result.message ?? 'No se pudo registrar el usuario.';
-      });
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+    if (!result.success) {
+      setState(() => _errorMessage = result.message);
+      return;
     }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.message!)));
+    _nameController.clear();
+    _emailController.clear();
   }
 
   @override
@@ -154,7 +99,6 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                         const SizedBox(height: 16),
                         _buildFormCard(),
                         const SizedBox(height: 24),
-                        _buildUserListSection(),
                       ],
                     ),
                   ),
@@ -253,7 +197,7 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Crea cuentas con rol de Cajero o Administrador para el punto de venta.',
+                  'El alta requiere autorización del servidor. El colaborador debe confirmar su correo antes de iniciar sesión.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
                 ),
               ],
@@ -393,6 +337,7 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _selectedRole,
                           decoration: _inputDecoration(
                             hint: 'Rol',
@@ -435,17 +380,27 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _selectedBranchId,
+                          validator: (value) =>
+                              _selectedRole == 'cajero' &&
+                                  (value == null || value.isEmpty)
+                              ? 'Selecciona una sucursal.'
+                              : null,
                           decoration: _inputDecoration(
                             hint: 'Sucursal',
                             icon: Icons.store_outlined,
                           ),
-                          items: StaffCatalog.branches.entries.map((e) {
-                            return DropdownMenuItem(
-                              value: e.key,
-                              child: Text(e.value),
-                            );
-                          }).toList(),
+                          items:
+                              {
+                                '': 'Sin sucursal fija',
+                                ..._authService.branches,
+                              }.entries.map((e) {
+                                return DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value),
+                                );
+                              }).toList(),
                           onChanged: (val) {
                             if (val != null) {
                               setState(() => _selectedBranchId = val);
@@ -474,7 +429,7 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: _inputDecoration(
-                  hint: 'Mínimo 6 caracteres',
+                  hint: 'Mínimo 8 caracteres',
                   icon: Icons.lock_outline,
                   suffix: IconButton(
                     icon: Icon(
@@ -484,14 +439,13 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
                       color: AppTheme.navyBlue,
                       size: 20,
                     ),
-                    onPressed: () => setState(
-                      () => _obscurePassword = !_obscurePassword,
-                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
                 validator: (val) {
-                  if (val == null || val.trim().length < 6) {
-                    return 'Mínimo 6 caracteres.';
+                  if (val == null || val.length < 8) {
+                    return 'Mínimo 8 caracteres.';
                   }
                   return null;
                 },
@@ -545,7 +499,7 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
               ListenableBuilder(
                 listenable: _authService,
                 builder: (context, _) {
-                  final loading = _authService.isLoading;
+                  final loading = _authService.isRegistering;
                   return ElevatedButton(
                     onPressed: loading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
@@ -588,114 +542,6 @@ class _AdminRegisterUserScreenState extends State<AdminRegisterUserScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildUserListSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              Icon(Icons.people_alt_outlined, color: AppTheme.navyBlue, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Personal y Cuentas Registradas',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.navyBlue,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_loadingUsers)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else
-          Card(
-            color: Colors.white,
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: AppTheme.borderLight),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _usersList.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final u = _usersList[index];
-                final isAdminRole = u.isAdmin;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isAdminRole
-                        ? AppTheme.goldLight
-                        : AppTheme.primarySoft,
-                    child: Icon(
-                      isAdminRole
-                          ? Icons.admin_panel_settings
-                          : Icons.point_of_sale,
-                      color: AppTheme.navyBlue,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    u.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppTheme.navyBlue,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${u.email} • ${u.branchName ?? "Sin sucursal"}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isAdminRole
-                          ? AppTheme.goldLight
-                          : AppTheme.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isAdminRole
-                            ? AppTheme.gold
-                            : AppTheme.navyBlueLight.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      isAdminRole ? 'ADMIN' : 'CAJERO',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isAdminRole
-                            ? AppTheme.goldDark
-                            : AppTheme.navyBlue,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
     );
   }
 

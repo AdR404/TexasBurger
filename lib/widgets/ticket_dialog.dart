@@ -108,7 +108,7 @@ class TicketDialog extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                '¡Venta registrada!',
+                '¡Venta Registrada!',
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,

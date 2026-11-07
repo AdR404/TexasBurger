@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../models/venta.dart';
 import 'operator_auth_service.dart';
 import 'supabase_environment.dart';
 import 'operator_session.dart';
+import 'app_auth_service.dart';
 
 const supabaseUrl = 'https://zlljyvowdripxdgvhilz.supabase.co';
 const supabaseKey = 'sb_publishable_QagT6TuxktFz4DgItZ6aEQ_jRv0DbUO';
@@ -12,10 +13,13 @@ const supabaseKey = 'sb_publishable_QagT6TuxktFz4DgItZ6aEQ_jRv0DbUO';
 class DbService {
   static const String _syncPrefKey = 'texas_db_sync_enabled';
 
+  static bool _initializedSupabase = false;
   static SupabaseClient get _db => Supabase.instance.client;
 
   // Build flag plus the saved preference enable the simple online writer.
-  static const bool onlineSalesEnabled = bool.fromEnvironment('TEXAS_ENABLE_SIMPLE_SALES');
+  static const bool onlineSalesEnabled = bool.fromEnvironment(
+    'TEXAS_ENABLE_SIMPLE_SALES',
+  );
   static SupabaseEnvironment? environment;
   static OperatorSession? session;
   static OperatorAuthService get operatorAuth => OperatorAuthService(_db);
@@ -24,9 +28,7 @@ class DbService {
     true,
   );
   static final ValueNotifier<String> lastSyncStatusNotifier =
-      ValueNotifier<String>(
-        'Conexión pendiente de comprobar',
-      );
+      ValueNotifier<String>('Conexión pendiente de comprobar');
 
   static bool get isSyncEnabled => syncEnabledNotifier.value;
 
@@ -37,32 +39,43 @@ class DbService {
     DateTime? date,
   }) async {
     if (page < 0) throw ArgumentError.value(page, 'page');
-    var query = _db.from('ventas').select(
-      'id,fecha_hora,total,metodo_pago,empresa_id,empresa_nombre,'
-      'sucursal_id,sucursal_nombre,empleado_pos_id,empleado_nombre,'
-      'subtotal,descuento,codigo_descuento,iva,tasa_iva,iva_incluido,'
-      'detalle_venta(id,producto_id,cantidad,precio_unitario,productos(nombre))',
-    ).eq('empresa_id', 'texas_burger');
+    final user = AppAuthService().currentUser;
+    if (user == null) {
+      throw StateError('Inicia sesion para consultar el historial.');
+    }
+    if (!user.isAdmin) branchId = user.branchId;
+    var query = _db
+        .from('ventas')
+        .select(
+          'id,fecha_hora,total,metodo_pago,empresa_id,empresa_nombre,'
+          'sucursal_id,sucursal_nombre,empleado_pos_id,empleado_nombre,'
+          'subtotal,descuento,codigo_descuento,iva,tasa_iva,iva_incluido,'
+          'detalle_venta(id,producto_id,cantidad,precio_unitario,productos(nombre))',
+        )
+        .eq('empresa_id', 'texas_burger');
     if (branchId != null) query = query.eq('sucursal_id', branchId);
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = DateTime(date.year, date.month, date.day + 1);
-      query = query.gte('fecha_hora', start.toUtc().toIso8601String())
+      query = query
+          .gte('fecha_hora', start.toUtc().toIso8601String())
           .lt('fecha_hora', end.toUtc().toIso8601String());
     }
-    return await query.order('fecha_hora', ascending: false, nullsFirst: false)
+    return await query
+        .order('fecha_hora', ascending: false, nullsFirst: false)
         .order('id', ascending: false)
         .order('id', referencedTable: 'detalle_venta')
         .limit(201, referencedTable: 'detalle_venta')
         .range(page * 50, page * 50 + 50)
-        .retry(enabled: false).timeout(const Duration(seconds: 20));
+        .retry(enabled: false)
+        .timeout(const Duration(seconds: 20));
   }
 
   static String get salesModeMessage => !isSyncEnabled
       ? 'Ventas solo en el dispositivo. No se enviarán automáticamente después. El inventario remoto requiere su propia sesión y permisos.'
       : onlineSalesEnabled
-          ? 'Ventas online habilitadas. Cada venta requiere confirmar cabecera y detalles en Supabase. La conexión aún debe comprobarse.'
-          : 'Esta compilación guarda ventas solo en el dispositivo; no incluye la opción de ventas online.';
+      ? 'Ventas online habilitadas. Cada venta requiere confirmar cabecera y detalles en Supabase. La conexión aún debe comprobarse.'
+      : 'Esta compilación guarda ventas solo en el dispositivo; no incluye la opción de ventas online.';
 
   static Future<void> setSyncEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
@@ -78,7 +91,8 @@ class DbService {
       final prefs = await SharedPreferences.getInstance();
       final enabled = prefs.getBool(_syncPrefKey) ?? true;
       syncEnabledNotifier.value = enabled;
-      lastSyncStatusNotifier.value = '$salesModeMessage Conexión pendiente de comprobar.';
+      lastSyncStatusNotifier.value =
+          '$salesModeMessage Conexión pendiente de comprobar.';
     } catch (_) {
       // Never resume remote writes if the saved preference could not be read.
       syncEnabledNotifier.value = false;
@@ -88,14 +102,17 @@ class DbService {
 
     try {
       environment = SupabaseEnvironment.resolve(mainPublicKey: supabaseKey);
-      await Supabase.initialize(
-        url: environment!.url,
-        publishableKey: environment!.publicKey,
-        authOptions: const FlutterAuthClientOptions(
-          persistSession: true,
-          detectSessionInUri: false,
-        ),
-      );
+      if (!_initializedSupabase) {
+        await Supabase.initialize(
+          url: environment!.url,
+          publishableKey: environment!.publicKey,
+          authOptions: const FlutterAuthClientOptions(
+            persistSession: true,
+            detectSessionInUri: true,
+          ),
+        );
+        _initializedSupabase = true;
+      }
       session?.dispose();
       session = OperatorSession(
         operatorAuth,
@@ -112,9 +129,14 @@ class DbService {
   }
 
   // Explicit opt-in for an authorized test build. No RPC or automatic retries.
-  static Future<void> guardarVenta(Venta venta, {SupabaseClient? client, bool? enabled}) async {
+  static Future<void> guardarVenta(
+    Venta venta, {
+    SupabaseClient? client,
+    bool? enabled,
+  }) async {
     if (!(enabled ?? onlineSalesEnabled) || !isSyncEnabled) {
-      lastSyncStatusNotifier.value = 'Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota';
+      lastSyncStatusNotifier.value =
+          'Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota';
       return;
     }
     final db = client ?? _db;
@@ -122,55 +144,109 @@ class DbService {
     bool headerSent = false;
     try {
       final context = venta.saleContext;
-      if (context == null || venta.items.isEmpty || venta.iva == null ||
-          venta.ivaRate != 0.16 || venta.ivaIncluded != true) {
+      if (context == null ||
+          venta.items.isEmpty ||
+          venta.iva == null ||
+          venta.ivaRate != 0.16 ||
+          venta.ivaIncluded != true) {
         throw StateError('Faltan contexto, productos o desglose fiscal.');
       }
-      final employee = await db.from('empleados_pos').select('usuario_id')
-          .eq('id', context.employeeId).eq('activo', true).eq('es_demo', false)
-          .single().retry(enabled: false);
-      final userId = employee['usuario_id'];
-      if (userId != null) {
-        if (userId is! int) throw StateError('El usuario asociado al empleado no es válido.');
-        await db.from('usuarios').select('id').eq('id', userId)
-            .eq('activo', true).single().retry(enabled: false);
+      final actor = db.auth.currentUser?.id;
+      if (actor == null) {
+        throw StateError('Inicia sesión antes de registrar la venta.');
       }
-      // This association identifies the record; it is NOT authentication or authorization.
+      final rows = await db.rpc('login_mi_perfil').retry(enabled: false);
+      if (rows is! List || rows.length != 1 || db.auth.currentUser?.id != actor) {
+        throw StateError('Se requiere un perfil autenticado valido.');
+      }
+      final profile = AuthUser.fromProfile(
+        db.auth.currentUser!.id,
+        db.auth.currentUser!.email ?? '',
+        Map<String, dynamic>.from(rows.single as Map),
+      );
+      if (profile.employeeId != context.employeeId ||
+          profile.employeeName != context.employeeName ||
+          (profile.branchId != null && profile.branchId != context.branchId)) {
+        throw StateError('El empleado o sucursal no corresponde a la sesion.');
+      }
+      final userId = profile.businessId;
       final details = <Map<String, dynamic>>[];
       for (final item in venta.items) {
-        final products = await db.from('productos').select('id')
-            .eq('nombre', item.product.name).eq('activo', true).retry(enabled: false);
-        if (products.length != 1 || products.single['id'] is! int ||
-            item.quantity <= 0 || !item.unitPrice.isFinite || item.unitPrice < 0) {
-          throw StateError('Producto sin correspondencia única válida: ${item.product.name}');
+        final products = await db
+            .from('productos')
+            .select('id')
+            .eq('nombre', item.product.name)
+            .eq('activo', true)
+            .retry(enabled: false);
+        if (products.length != 1 ||
+            products.single['id'] is! int ||
+            item.quantity <= 0 ||
+            !item.unitPrice.isFinite ||
+            item.unitPrice < 0) {
+          throw StateError(
+            'Producto sin correspondencia única válida: ${item.product.name}',
+          );
         }
-        details.add({'producto_id': products.single['id'], 'cantidad': item.quantity,
-          'precio_unitario': item.unitPrice});
+        details.add({
+          'producto_id': products.single['id'],
+          'cantidad': item.quantity,
+          'precio_unitario': item.unitPrice,
+        });
+      }
+      if (db.auth.currentUser?.id != actor ||
+          db.auth.currentSession?.isExpired != false) {
+        throw StateError('La sesión cambió o caducó antes de enviar la venta.');
       }
       headerSent = true;
-      final header = await db.from('ventas').insert({
-        'usuario_id': userId, 'fecha_hora': venta.timestamp.toIso8601String(),
-        'total': venta.total, 'metodo_pago': venta.paymentMethod,
-        'subtotal': venta.subtotal, 'descuento': venta.discount,
-        'codigo_descuento': venta.discountCode, 'iva': venta.iva,
-        'tasa_iva': venta.ivaRate, 'iva_incluido': venta.ivaIncluded,
-        'empresa_id': context.companyId, 'empresa_nombre': context.companyName,
-        'sucursal_id': context.branchId, 'sucursal_nombre': context.branchName,
-        'empleado_pos_id': context.employeeId, 'empleado_nombre': context.employeeName,
-      }).select('id').single().retry(enabled: false);
+      final header = await db
+          .from('ventas')
+          .insert({
+            'usuario_id': userId,
+            'fecha_hora': venta.timestamp.toIso8601String(),
+            'total': venta.total,
+            'metodo_pago': venta.paymentMethod,
+            'subtotal': venta.subtotal,
+            'descuento': venta.discount,
+            'codigo_descuento': venta.discountCode,
+            'iva': venta.iva,
+            'tasa_iva': venta.ivaRate,
+            'iva_incluido': venta.ivaIncluded,
+            'empresa_id': context.companyId,
+            'empresa_nombre': context.companyName,
+            'sucursal_id': context.branchId,
+            'sucursal_nombre': context.branchName,
+            'empleado_pos_id': context.employeeId,
+            'empleado_nombre': context.employeeName,
+          })
+          .select('id')
+          .single()
+          .retry(enabled: false);
       remoteId = header['id'] as int;
-      for (final detail in details) { detail['venta_id'] = remoteId; }
+      for (final detail in details) {
+        detail['venta_id'] = remoteId;
+      }
       await db.from('detalle_venta').insert(details).retry(enabled: false);
-      final stored = await db.from('detalle_venta')
-          .select('producto_id,cantidad,precio_unitario').eq('venta_id', remoteId).retry(enabled: false);
+      final stored = await db
+          .from('detalle_venta')
+          .select('producto_id,cantidad,precio_unitario')
+          .eq('venta_id', remoteId)
+          .retry(enabled: false);
       final remaining = List<Map<String, dynamic>>.from(stored);
       for (final detail in details) {
-        final index = remaining.indexWhere((row) => row['producto_id'] == detail['producto_id'] &&
-          row['cantidad'] == detail['cantidad'] && row['precio_unitario'] == detail['precio_unitario']);
-        if (index < 0) throw StateError('No se verificaron todos los detalles.');
+        final index = remaining.indexWhere(
+          (row) =>
+              row['producto_id'] == detail['producto_id'] &&
+              row['cantidad'] == detail['cantidad'] &&
+              row['precio_unitario'] == detail['precio_unitario'],
+        );
+        if (index < 0) {
+          throw StateError('No se verificaron todos los detalles.');
+        }
         remaining.removeAt(index);
       }
-      if (remaining.isNotEmpty) throw StateError('Hay detalles adicionales inesperados.');
+      if (remaining.isNotEmpty) {
+        throw StateError('Hay detalles adicionales inesperados.');
+      }
       lastSyncStatusNotifier.value = 'Venta completa en Supabase: $remoteId';
     } catch (error) {
       final message = headerSent

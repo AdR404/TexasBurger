@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/producto.dart';
 import 'package:texas_burger/models/venta_item.dart';
 import 'package:texas_burger/services/bootstrap_service.dart';
@@ -9,12 +10,11 @@ import 'package:texas_burger/services/pricing_service.dart';
 import 'package:texas_burger/services/product_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
 import 'package:texas_burger/services/user_role_service.dart';
-import 'support/staff_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final roles = UserRoleService();
-  final staff = testStaffSelection('norte', 'demo_sofia_reyes');
+  final staff = StaffCatalog.selection('norte', 'demo_sofia_reyes');
 
   setUp(() {
     roles.switchToUser();
@@ -59,7 +59,7 @@ void main() {
         products.products.singleWhere((p) => p.id == original.id).toJson(),
         original.toJson(),
       );
-      roles.setAuthenticatedRole('admin');
+      roles.loginAdmin('admin', 'admin');
       final newProduct = original.copyWith(id: 'new', name: 'PRODUCTO NUEVO');
       await products.addProduct(newProduct);
       roles.switchToUser();
@@ -115,7 +115,7 @@ void main() {
     await sales.init();
     await caja.init();
     final product = products.products.first;
-    roles.setAuthenticatedRole('admin');
+    roles.loginAdmin('admin', 'admin');
     await caja.abrirCaja(500, saleContext: staff);
     final sale = await sales.registerSale(
       saleContext: staff,
@@ -139,6 +139,7 @@ void main() {
       products.resetToDefaults,
       () => sales.cancelSale(sale.id),
       sales.clearAllSales,
+      () => sales.loadSampleSales(products.products),
       () => caja.abrirCaja(100, saleContext: staff),
       () => caja.registrarMovimiento(
         type: 'salida',

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/auth/login_screen.dart';
+import '../screens/auth/admin_register_user_screen.dart';
 import '../services/app_auth_service.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
@@ -121,6 +121,49 @@ class UserSessionButton extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Divider(),
 
+                // Opción exclusiva de Admin: Registrar Nuevo Usuario
+                if (isAdmin) ...[
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.goldLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.person_add_alt_1_rounded,
+                        color: AppTheme.navyBlue,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Registrar Nuevo Usuario',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.navyBlue,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Alta de cajeros y administradores',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.navyBlue,
+                    ),
+                    onTap: () {
+                      Navigator.pop(bottomSheetCtx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminRegisterUserScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                ],
                 // Cerrar Sesión
                 ListTile(
                   leading: Container(
@@ -150,15 +193,6 @@ class UserSessionButton extends StatelessWidget {
                   onTap: () async {
                     Navigator.pop(bottomSheetCtx);
                     await authService.signOut();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    }
                   },
                 ),
               ],
@@ -201,11 +235,7 @@ class UserSessionButton extends StatelessWidget {
                     size: 18,
                   ),
                   SizedBox(width: 2),
-                  Icon(
-                    Icons.more_vert,
-                    color: Colors.white70,
-                    size: 14,
-                  ),
+                  Icon(Icons.more_vert, color: Colors.white70, size: 14),
                 ],
               ),
             ),
@@ -215,4 +245,3 @@ class UserSessionButton extends StatelessWidget {
     );
   }
 }
-

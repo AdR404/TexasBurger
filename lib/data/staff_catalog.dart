@@ -1,11 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-class StaffEmployee {
-  const StaffEmployee({required this.id, required this.name});
-
-  final String id;
-  final String name;
-}
+import '../models/sale_context.dart';
 
 // Catálogo local de sucursales y personal de caja
 class StaffCatalog {
@@ -14,24 +7,23 @@ class StaffCatalog {
     'norte': 'Norte',
   };
 
-  static Future<List<StaffEmployee>> loadEmployees({
-    SupabaseClient? client,
-  }) async {
-    final db = client ?? Supabase.instance.client;
-    final rows = await db
-        .from('empleados_pos')
-        .select('id,nombre')
-        .eq('activo', true)
-        .eq('es_demo', false)
-        .order('nombre')
-        .retry(enabled: false);
-    return rows
-        .map(
-          (row) => StaffEmployee(
-            id: row['id'] as String,
-            name: row['nombre'] as String,
-          ),
-        )
-        .toList();
+  static const employees = {
+    'demo_ana_torres': 'Ana Torres',
+    'demo_luis_garcia': 'Luis García',
+    'demo_sofia_reyes': 'Sofía Reyes',
+  };
+
+  static SaleContext selection(String branchId, String employeeId) {
+    if (!branches.containsKey(branchId) || !employees.containsKey(employeeId)) {
+      throw ArgumentError(
+        'Selecciona una sucursal y un empleado del catálogo.',
+      );
+    }
+    return SaleContext(
+      branchId: branchId,
+      branchName: branches[branchId]!,
+      employeeId: employeeId,
+      employeeName: employees[employeeId]!,
+    );
   }
 }

@@ -9,6 +9,8 @@ import 'inventory_expiry_badge.dart';
 
 enum InventoryMovementKind { salida, descarte }
 
+// Datos preparados para una futura conexión.
+// Esta clase NO guarda ni modifica inventario.
 class InventoryMovementDraft {
   final InventoryMovementKind type;
   final int lotId;
@@ -18,6 +20,7 @@ class InventoryMovementDraft {
   final String unit;
   final String reason;
   final DateTime createdAt;
+  final bool isDemo;
 
   const InventoryMovementDraft({
     required this.type,
@@ -28,12 +31,14 @@ class InventoryMovementDraft {
     required this.unit,
     required this.reason,
     required this.createdAt,
+    required this.isDemo,
   });
 }
 
 Future<InventoryMovementDraft?> showInventoryMovementsSheet(
   BuildContext context, {
   required List<InventoryLot> lots,
+  required bool isDemo,
   List<Map<String, dynamic>> history = const [],
 }) {
   return showModalBottomSheet<InventoryMovementDraft>(
@@ -41,16 +46,19 @@ Future<InventoryMovementDraft?> showInventoryMovementsSheet(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _InventoryMovementsSheet(lots: lots, history: history),
+    builder: (_) =>
+        _InventoryMovementsSheet(lots: lots, isDemo: isDemo, history: history),
   );
 }
 
 class _InventoryMovementsSheet extends StatefulWidget {
   final List<InventoryLot> lots;
+  final bool isDemo;
   final List<Map<String, dynamic>> history;
 
   const _InventoryMovementsSheet({
     required this.lots,
+    required this.isDemo,
     required this.history,
   });
 
@@ -114,6 +122,7 @@ class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
         unit: selectedLot.unit,
         reason: _reasonController.text.trim(),
         createdAt: DateTime.now(),
+        isDemo: widget.isDemo,
       ),
     );
   }
@@ -167,6 +176,23 @@ class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
 
               const SizedBox(height: 8),
 
+              if (widget.isDemo)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldSoft,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'MODO DEMOSTRACIÓN: estos lotes '
+                    'son simulados y no se guardarán.',
+                    style: TextStyle(
+                      color: AppTheme.navyBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 16),
 
               Wrap(
@@ -177,7 +203,7 @@ class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
                       'Entradas',
                       'Salidas',
                       'Descartes',
-                      'Historial',
+                      if (!widget.isDemo) 'Historial',
                     ].map((section) {
                       return ChoiceChip(
                         label: Text(section),
@@ -312,8 +338,8 @@ class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
                       padding: EdgeInsets.all(20),
                       child: Text(
                         'No hay lotes disponibles para '
-                        'esta operación. Registra lotes reales '
-                        'en esta sucursal para continuar.',
+                        'esta operación. Activa los datos '
+                        'simulados para probar la interfaz.',
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -431,6 +457,13 @@ class _InventoryMovementsSheetState extends State<_InventoryMovementsSheet> {
 
                 const SizedBox(height: 12),
 
+                const Text(
+                  'Versión de prueba: validar no '
+                  'descuenta existencias ni guarda '
+                  'movimientos en Supabase.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                ),
               ],
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../data/ingredient_catalog.dart';
 import '../services/inventory_repository.dart';
 import '../services/user_role_service.dart';
 import '../theme/app_theme.dart';
@@ -8,7 +9,7 @@ import '../theme/app_theme.dart';
 // Datos validados de una nueva entrada.
 // Todavía no se guardan en Supabase.
 class InventoryLotDraft {
-  final int ingredientId;
+  final int? ingredientId;
   final String ingredientName;
   final double quantity;
   final String unit;
@@ -19,7 +20,7 @@ class InventoryLotDraft {
   final bool estimatedExpiration;
 
   const InventoryLotDraft({
-    required this.ingredientId,
+    this.ingredientId,
     required this.ingredientName,
     required this.quantity,
     required this.unit,
@@ -33,7 +34,7 @@ class InventoryLotDraft {
 
 Future<InventoryLotDraft?> showAddInventoryLotSheet(
   BuildContext context, {
-  required List<InventoryIngredient> ingredients,
+  List<InventoryIngredient>? ingredients,
 }) {
   return showModalBottomSheet<InventoryLotDraft>(
     context: context,
@@ -45,8 +46,8 @@ Future<InventoryLotDraft?> showAddInventoryLotSheet(
 }
 
 class _AddInventoryLotSheet extends StatefulWidget {
-  const _AddInventoryLotSheet({required this.ingredients});
-  final List<InventoryIngredient> ingredients;
+  const _AddInventoryLotSheet({this.ingredients});
+  final List<InventoryIngredient>? ingredients;
 
   @override
   State<_AddInventoryLotSheet> createState() => _AddInventoryLotSheetState();
@@ -140,10 +141,12 @@ class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     final draft = InventoryLotDraft(
-        ingredientId: int.parse(_ingredient!),
-        ingredientName: widget.ingredients
-          .firstWhere((i) => i.id.toString() == _ingredient)
-          .name,
+      ingredientId: widget.ingredients == null ? null : int.parse(_ingredient!),
+      ingredientName: widget.ingredients == null
+          ? _ingredient!
+          : widget.ingredients!
+                .firstWhere((i) => i.id.toString() == _ingredient)
+                .name,
       quantity: _parseNumber(_quantityController.text)!,
       unit: _unit,
       location: _location,
@@ -191,19 +194,31 @@ class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
                   labelText: 'Ingrediente',
                   border: OutlineInputBorder(),
                 ),
-                items: widget.ingredients
-                    .map(
-                      (i) => DropdownMenuItem(
-                        value: i.id.toString(),
-                        child: Text(i.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    )
-                    .toList(),
+                items: widget.ingredients == null
+                    ? IngredientCatalog.defaultIngredients
+                          .map(
+                            (name) => DropdownMenuItem(
+                              value: name,
+                              child: Text(name),
+                            ),
+                          )
+                          .toList()
+                    : widget.ingredients!
+                          .map(
+                            (i) => DropdownMenuItem(
+                              value: i.id.toString(),
+                              child: Text(
+                                i.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
                 onChanged: (value) {
                   setState(() {
                     _ingredient = value;
-                    if (value != null) {
-                      _unit = widget.ingredients
+                    if (widget.ingredients != null && value != null) {
+                      _unit = widget.ingredients!
                           .firstWhere((i) => i.id.toString() == value)
                           .unit;
                     }
@@ -245,15 +260,24 @@ class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
                         labelText: 'Unidad',
                         border: OutlineInputBorder(),
                       ),
-                      items: [_unit]
-                          .map(
-                            (unit) => DropdownMenuItem(
-                              value: unit,
-                              child: Text(unit),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: null,
+                      items:
+                          (widget.ingredients == null
+                                  ? ['kg', 'g', 'pzas', 'L', 'ml']
+                                  : [_unit])
+                              .map(
+                                (unit) => DropdownMenuItem(
+                                  value: unit,
+                                  child: Text(unit),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: widget.ingredients != null
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _unit = value);
+                              }
+                            },
                     ),
                   ),
                 ],
@@ -361,7 +385,11 @@ class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _validateDraft,
-                      child: const Text('Registrar lote'),
+                      child: Text(
+                        widget.ingredients == null
+                            ? 'Validar datos'
+                            : 'Registrar lote',
+                      ),
                     ),
                   ),
                 ],
@@ -369,6 +397,12 @@ class _AddInventoryLotSheetState extends State<_AddInventoryLotSheet> {
 
               const SizedBox(height: 10),
 
+              const Text(
+                'Versión de prueba: los datos todavía '
+                'no se guardarán en la base de datos.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
             ],
           ),
         ),

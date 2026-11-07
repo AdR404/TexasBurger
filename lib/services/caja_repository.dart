@@ -3,6 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/corte_caja.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
+import 'user_role_service.dart';
+import 'app_auth_service.dart';
+import 'caja_service.dart';
 
 class CajaSnapshot {
   const CajaSnapshot(this.active, this.history);
@@ -72,6 +75,7 @@ class CajaRepository {
   }
 
   Future<String> authorize() async {
+    UserRoleService().requireAdmin();
     final actor = _actor();
     if (actor == null) {
       throw StateError(
@@ -213,8 +217,10 @@ class CajaRepository {
     DateTime end,
   ) async {
     final opening = DateTime.parse(turn['fecha_apertura'] as String).toUtc();
-    if (end.isBefore(opening) && opening.difference(end) < const Duration(seconds: 1)) {
-      end = opening; // A newly opened shift may be within the rounded HTTP second.
+    if (end.isBefore(opening) &&
+        opening.difference(end) < const Duration(seconds: 1)) {
+      end =
+          opening; // A newly opened shift may be within the rounded HTTP second.
     }
     if (end.isBefore(opening)) {
       throw StateError(
@@ -283,13 +289,25 @@ class CajaRepository {
   Future<int> open(SaleContext context, double cash) async {
     cents(cash);
     final actor = await authorize();
+    final profile = AppAuthService().currentUser;
+    if (profile == null || profile.id != actor ||
+        context.employeeId != profile.employeeId ||
+        context.employeeName != profile.employeeName ||
+        AppAuthService().branches[context.branchId] != context.branchName ||
+        CajaService().saleContext?.branchId != context.branchId) {
+      throw StateError('La apertura requiere el empleado autenticado y la sucursal operativa actual.');
+    }
     final existing = await _open(context.branchId);
     if (existing != null) return existing['id'] as int;
     await _checkedNow();
+    if (AppAuthService().currentUser?.id != actor ||
+        CajaService().saleContext?.branchId != context.branchId) {
+      throw StateError('Cambió la sesión o sucursal antes de abrir Caja.');
+    }
     return _rpc('caja_abrir_turno', {
       'p_sucursal_id': context.branchId,
-      'p_empleado_pos_id': context.employeeId,
-      'p_empleado_nombre': context.employeeName,
+      'p_empleado_pos_id': profile.employeeId,
+      'p_empleado_nombre': profile.employeeName,
       'p_fondo_inicial': cash,
     }, actor);
   }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/discount_code.dart';
 import 'package:texas_burger/models/producto.dart';
 import 'package:texas_burger/models/venta.dart';
@@ -11,7 +12,6 @@ import 'package:texas_burger/services/export_service.dart';
 import 'package:texas_burger/services/pricing_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
 import 'package:texas_burger/services/user_role_service.dart';
-import 'support/staff_fixtures.dart';
 
 List<VentaItem> items(double price, {String id = 'test', int quantity = 1}) => [
   VentaItem(
@@ -146,7 +146,7 @@ void main() {
       });
       final service = DiscountCodeService.forTesting();
       await service.init();
-      UserRoleService().setAuthenticatedRole('admin');
+      UserRoleService().loginAdmin('admin', 'admin');
       await Future.wait([
         service.save(coupon(code: ' diez ')),
         service.save(coupon(code: 'DOS', value: 2)),
@@ -189,7 +189,7 @@ void main() {
       final service = DiscountCodeService.forTesting();
       await service.init();
       expect(service.loadFailed, isTrue);
-      UserRoleService().setAuthenticatedRole('admin');
+      UserRoleService().loginAdmin('admin', 'admin');
       await expectLater(service.save(coupon()), throwsStateError);
       expect(
         (await SharedPreferences.getInstance()).getString(
@@ -228,7 +228,7 @@ void main() {
         coupon: coupon(code: 'A,"B'),
       );
       final sale = await sales.registerSale(
-        saleContext: testStaffSelection('norte', 'demo_sofia_reyes'),
+        saleContext: StaffCatalog.selection('norte', 'demo_sofia_reyes'),
         items: items(116),
         subtotal: calc.subtotal,
         discount: calc.discount,

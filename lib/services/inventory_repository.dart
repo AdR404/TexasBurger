@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/inventory_lot.dart';
 import 'db_service.dart';
+import 'user_role_service.dart';
 
 class InventoryIngredient {
   const InventoryIngredient(this.id, this.name, this.unit);
@@ -35,6 +36,7 @@ class InventoryRepository {
   String? get operatorId => _operatorId();
 
   Future<String> _authorize() async {
+    UserRoleService().requireAdmin();
     final actor = operatorId;
     if (actor == null) {
       throw const InventoryException(
@@ -181,14 +183,16 @@ class InventoryRepository {
     required String type,
     required double quantity,
     required String reason,
+    required bool isDemo,
   }) {
-    if (lotId <= 0 ||
+    if (isDemo ||
+        lotId <= 0 ||
         !['salida', 'descarte'].contains(type) ||
         !validInventoryDecimal(quantity, 3) ||
         quantity <= 0 ||
         reason.trim().isEmpty) {
       throw const InventoryException(
-        'Movimiento inválido. Revisa lote, tipo, cantidad y motivo.',
+        'Movimiento inválido. Los lotes demo no se envían a Supabase.',
       );
     }
     return _write('inventario_registrar_baja', {

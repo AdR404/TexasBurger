@@ -54,7 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ? const DailyDashboardScreen()
         : const SizedBox.shrink(),
     HistoryScreen(active: _selected == _Section.history),
-    _roleService.isAdmin ? CajaScreen(active: _selected == _Section.caja) : const SizedBox.shrink(),
+    _roleService.isAdmin
+        ? CajaScreen(active: _selected == _Section.caja)
+        : const SizedBox.shrink(),
     const SettingsScreen(),
   ];
 

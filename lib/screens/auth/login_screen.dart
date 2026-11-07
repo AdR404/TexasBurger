@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../services/app_auth_service.dart';
 import '../../theme/app_theme.dart';
-import '../home_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -61,24 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
     } else {
       setState(() {
         _errorMessage = result.message ?? 'Error al iniciar sesión.';
       });
     }
-  }
-
-  void _fillDebugCredentials(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-      _errorMessage = null;
-    });
   }
 
   @override
@@ -105,7 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.borderLight, width: 1.5),
+                        border: Border.all(
+                          color: AppTheme.borderLight,
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.06),
@@ -179,7 +167,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Banner de error si existe
-                            if (_errorMessage != null) ...[
+                            if (_errorMessage != null ||
+                                _authService.message != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
@@ -189,7 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: AppTheme.dangerSoft,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: AppTheme.danger.withValues(alpha: 0.3),
+                                    color: AppTheme.danger.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -202,7 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        _errorMessage!,
+                                        (_errorMessage ??
+                                            _authService.message)!,
                                         style: const TextStyle(
                                           color: AppTheme.danger,
                                           fontSize: 13,
@@ -272,7 +264,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Por favor ingresa tu correo o usuario.';
+                                  return 'Por favor ingresa tu correo electrónico.';
+                                }
+                                if (!value.contains('@')) {
+                                  return 'Ingresa un correo electrónico válido.';
                                 }
                                 return null;
                               },
@@ -366,7 +361,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const ForgotPasswordScreen(),
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
                                     ),
                                   );
                                 },
@@ -442,51 +438,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.borderLight),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Cuentas locales de prueba (solo debug)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              ActionChip(
-                                label: const Text('Admin de prueba'),
-                                onPressed: () => _fillDebugCredentials(
-                                  AppAuthService.debugAdminEmail,
-                                  AppAuthService.debugAdminPassword,
-                                ),
-                              ),
-                              ActionChip(
-                                label: const Text('Cajera de prueba'),
-                                onPressed: () => _fillDebugCredentials(
-                                  AppAuthService.debugCashierEmail,
-                                  AppAuthService.debugCashierPassword,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -496,4 +448,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

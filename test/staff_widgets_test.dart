@@ -24,6 +24,7 @@ import 'package:texas_burger/widgets/sale_history_list.dart';
 import 'package:texas_burger/widgets/staff_context_selector.dart';
 import 'package:texas_burger/widgets/ticket_dialog.dart';
 import 'package:texas_burger/theme/app_theme.dart';
+import 'support/auth_fixtures.dart';
 
 Venta ticket({
   SaleContext? selection,
@@ -57,6 +58,8 @@ Venta ticket({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(clearTestSession);
+  tearDown(clearTestSession);
   setUpAll(() async {
     // Carga la fuente Roboto del SDK de Flutter para las pruebas de interfaz
     final configFile = File('.dart_tool/package_config.json').absolute;
@@ -77,8 +80,9 @@ void main() {
     await loader.load();
   });
   testWidgets(
-    'staff must select branch and employee; no employee is silently chosen',
+    'authenticated employee is fixed while an admin selects a branch',
     (tester) async {
+      authenticateAsTestUser();
       SaleContext? selected;
       await tester.pumpWidget(
         MaterialApp(
@@ -98,20 +102,20 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Norte').last);
       await tester.pumpAndSettle();
-      expect(selected, isNull);
-      await tester.tap(find.byKey(const ValueKey('staff-employee')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sofía Reyes').last);
-      await tester.pumpAndSettle();
       expect(selected!.branchId, 'norte');
       expect(selected!.employeeId, 'demo_sofia_reyes');
+      expect(find.text('Atiende: Sofía Reyes'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'active shift disables branch but allows another attending employee',
+    'active shift locks branch and employee remains bound to the account',
     (tester) async {
+      authenticateAsTestUser(
+        employeeId: 'demo_ana_torres',
+        employeeName: 'Ana Torres',
+      );
       SaleContext? selected;
       await tester.pumpWidget(
         MaterialApp(
@@ -132,12 +136,8 @@ void main() {
         find.byKey(const ValueKey('staff-branch')),
       );
       expect(branch.onChanged, isNull);
-      await tester.tap(find.byKey(const ValueKey('staff-employee')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Luis García').last);
-      await tester.pumpAndSettle();
-      expect(selected!.branchId, 'perimetral_sur');
-      expect(selected!.employeeName, 'Luis García');
+      expect(find.text('Atiende: Ana Torres'), findsOneWidget);
+      expect(selected, isNull);
     },
   );
 
@@ -303,8 +303,6 @@ void main() {
   testWidgets('direct internal screens enforce the current local role', (
     tester,
   ) async {
-    final roles = UserRoleService()..switchToUser();
-    addTearDown(roles.switchToUser);
     for (final screen in [const DailyDashboardScreen(), const CajaScreen()]) {
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: screen),
@@ -316,10 +314,10 @@ void main() {
       );
       expect(find.text('Abrir caja'), findsNothing);
       expect(find.byTooltip('Exportar ventas del periodo'), findsNothing);
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.pumpAndSettle();
       expect(find.text('Disponible solo en modo administrador.'), findsNothing);
-      roles.switchToUser();
+      clearTestSession();
       await tester.pumpAndSettle();
       expect(
         find.text('Disponible solo en modo administrador.'),
@@ -369,8 +367,7 @@ void main() {
         await SalesService().init();
         await CajaService().init();
       });
-      final roles = UserRoleService()..switchToUser();
-      addTearDown(roles.switchToUser);
+      final roles = UserRoleService();
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: const HomeScreen()),
       );
@@ -401,6 +398,7 @@ void main() {
       }
       expect(tester.takeException(), isNull);
       // El usuario puede vender y cambiar cantidades en el carrito
+      authenticateAsTestUser(role: 'cajero', branchId: 'norte');
       await tester.runAsync(
         () => CajaService().updateSaleContext(
           StaffCatalog.selection('norte', 'demo_sofia_reyes'),
@@ -468,16 +466,7 @@ void main() {
       expect(find.byTooltip('Editar precio'), findsNothing);
       expect(find.byType(Switch), findsNothing);
 
-      // Prueba de inicio de sesión como administrador desde la interfaz
-      await tester.tap(find.text('Usuario'));
-      await tester.pumpAndSettle();
-      final loginFields = find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      );
-      await tester.enterText(loginFields.at(0), 'admin');
-      await tester.enterText(loginFields.at(1), 'admin');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      authenticateAsTestUser();
       await tester.pumpAndSettle();
       expect(roles.isAdmin, isTrue);
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -556,7 +545,7 @@ void main() {
           )
           .onPressed!;
       final beforeRevocation = ProductService().products.first.toJson();
-      roles.switchToUser();
+      clearTestSession();
       save();
       await tester.pumpAndSettle();
       expect(ProductService().products.first.toJson(), beforeRevocation);
@@ -617,7 +606,7 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       for (final restrictedIndex in [1, 3, 1, 3]) {
-        roles.loginAdmin('admin', 'admin');
+        authenticateAsTestUser();
         await tester.pumpAndSettle();
         await tester.tap(
           find.byType(NavigationDestination).at(restrictedIndex),
@@ -627,7 +616,7 @@ void main() {
           find.byType(restrictedIndex == 1 ? DailyDashboardScreen : CajaScreen),
           findsOneWidget,
         );
-        roles.switchToUser();
+        clearTestSession();
         await tester.pumpAndSettle();
         expect(find.byType(QuickSaleScreen), findsOneWidget);
         expect(
@@ -646,7 +635,7 @@ void main() {
       }
       // Operaciones de apertura, movimientos y cierre de caja en modo administrador
       tester.view.physicalSize = const Size(400, 900);
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.pumpAndSettle();
       await tester.tap(find.byType(NavigationDestination).at(3));
       await tester.pumpAndSettle();
@@ -682,7 +671,7 @@ void main() {
       expect(CajaService().cortesHistory.first.difference, 0);
       await tester.tap(find.text('Aceptar'));
       await tester.pumpAndSettle();
-      roles.switchToUser();
+      authenticateAsTestUser(role: 'cajero', branchId: 'norte');
       await tester.runAsync(
         () => CajaService().updateSaleContext(
           StaffCatalog.selection('norte', 'demo_sofia_reyes'),

@@ -15,8 +15,8 @@ import 'package:texas_burger/services/caja_service.dart';
 import 'package:texas_burger/services/discount_code_service.dart';
 import 'package:texas_burger/services/product_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
-import 'package:texas_burger/services/user_role_service.dart';
 import 'package:texas_burger/theme/app_theme.dart';
+import 'support/auth_fixtures.dart';
 import 'package:texas_burger/widgets/cart_bottom_sheet.dart';
 import 'package:texas_burger/widgets/discount_codes_dialog.dart';
 import 'package:texas_burger/widgets/ticket_dialog.dart';
@@ -30,13 +30,13 @@ void main() {
     price: 116,
     category: 'Bebidas',
   );
-  final roles = UserRoleService();
   final discounts = DiscountCodeService();
   Finder field(String label) => find.byWidgetPredicate(
     (w) => w is TextField && w.decoration?.labelText == label,
   );
 
   setUpAll(() async {
+    authenticateAsTestUser();
     final configFile = File('.dart_tool/package_config.json').absolute;
     final config =
         jsonDecode(await configFile.readAsString()) as Map<String, dynamic>;
@@ -63,8 +63,8 @@ void main() {
       StaffCatalog.selection('norte', 'demo_sofia_reyes'),
     );
   });
-  setUp(roles.switchToUser);
-  tearDown(roles.switchToUser);
+  setUp(clearTestSession);
+  tearDown(clearTestSession);
 
   testWidgets(
     'coupon administration is protected, scrolls and revokes stale actions',
@@ -85,7 +85,7 @@ void main() {
         find.text('Disponible solo en modo administrador.'),
         findsOneWidget,
       );
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.pumpAndSettle();
       await tester.enterText(field('Código'), ' diez_ui ');
       await tester.enterText(
@@ -122,12 +122,12 @@ void main() {
                 .first,
           )
           .onPressed!;
-      roles.switchToUser();
+      clearTestSession();
       staleDelete();
       await tester.pumpAndSettle();
       expect(discounts.findActive('DIEZ_UI'), isNotNull);
       expect(find.text('Guardar código'), findsNothing);
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byTooltip('Eliminar código').first);
       await tester.runAsync(() async {
@@ -148,13 +148,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Códigos de descuento'), findsNothing);
-    roles.loginAdmin('admin', 'admin');
+    authenticateAsTestUser();
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Administrar'));
     await tester.tap(find.text('Administrar'));
     await tester.pumpAndSettle();
     expect(find.byType(DiscountCodesDialog), findsOneWidget);
-    roles.switchToUser();
+    clearTestSession();
     await tester.pumpAndSettle();
     expect(find.text('Guardar código'), findsNothing);
     expect(find.text('Disponible solo en modo administrador.'), findsOneWidget);
@@ -168,7 +168,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.runAsync(
         () => discounts.save(
           const DiscountCode(
@@ -179,7 +179,7 @@ void main() {
           ),
         ),
       );
-      roles.switchToUser();
+      authenticateAsTestUser(role: 'cajero', branchId: 'norte');
       await tester.pumpWidget(
         MaterialApp(theme: AppTheme.lightTheme, home: const QuickSaleScreen()),
       );
@@ -227,9 +227,9 @@ void main() {
             find.widgetWithText(ElevatedButton, 'Cobrar \$208.80'),
           )
           .onPressed!;
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await tester.runAsync(() => discounts.setActive('VENTA10', false));
-      roles.switchToUser();
+      authenticateAsTestUser(role: 'cajero', branchId: 'norte');
       staleCharge();
       await tester.pumpAndSettle();
       expect(SalesService().sales, isEmpty);

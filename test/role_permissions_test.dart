@@ -10,6 +10,7 @@ import 'package:texas_burger/services/pricing_service.dart';
 import 'package:texas_burger/services/product_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
 import 'package:texas_burger/services/user_role_service.dart';
+import 'support/auth_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,10 +18,10 @@ void main() {
   final staff = StaffCatalog.selection('norte', 'demo_sofia_reyes');
 
   setUp(() {
-    roles.switchToUser();
+    clearTestSession();
     SharedPreferences.setMockInitialValues({});
   });
-  tearDown(roles.switchToUser);
+  tearDown(clearTestSession);
 
   test('all product names render in sentence case without changing JSON', () {
     for (final entry in {
@@ -59,10 +60,10 @@ void main() {
         products.products.singleWhere((p) => p.id == original.id).toJson(),
         original.toJson(),
       );
-      roles.loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       final newProduct = original.copyWith(id: 'new', name: 'PRODUCTO NUEVO');
       await products.addProduct(newProduct);
-      roles.switchToUser();
+      clearTestSession();
       final restarted = ProductService.forTesting();
       await restarted.init();
       expect(
@@ -115,7 +116,7 @@ void main() {
     await sales.init();
     await caja.init();
     final product = products.products.first;
-    roles.loginAdmin('admin', 'admin');
+    authenticateAsTestUser();
     await caja.abrirCaja(500, saleContext: staff);
     final sale = await sales.registerSale(
       saleContext: staff,
@@ -129,7 +130,7 @@ void main() {
       cashGiven: product.price,
       changeReturned: 0,
     );
-    roles.switchToUser();
+    clearTestSession();
     final prefs = await SharedPreferences.getInstance();
     final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
     for (final operation in <Future<dynamic> Function()>[

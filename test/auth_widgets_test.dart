@@ -7,6 +7,7 @@ import 'package:texas_burger/screens/auth/login_screen.dart';
 import 'package:texas_burger/services/app_auth_service.dart';
 import 'package:texas_burger/services/user_role_service.dart';
 import 'package:texas_burger/theme/app_theme.dart';
+import 'support/auth_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,38 +15,30 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     UserRoleService().switchToUser();
+    clearTestSession();
   });
 
   Widget buildTestable(Widget child) {
-    return MaterialApp(
-      theme: AppTheme.lightTheme,
-      home: child,
-    );
+    return MaterialApp(theme: AppTheme.lightTheme, home: child);
   }
 
-  testWidgets('LoginScreen renders fields, buttons, and demo chips', (tester) async {
+  testWidgets('LoginScreen renders Supabase email fields without demo access', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestable(const LoginScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Iniciar Sesión'), findsWidgets);
     expect(find.text('Punto de Venta y Control Operativo'), findsOneWidget);
-    expect(find.text('Correo o Usuario'), findsOneWidget);
+    expect(find.text('Correo electrónico'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
     expect(find.text('¿Olvidaste tu contraseña?'), findsOneWidget);
-    expect(find.text('Admin (demo)'), findsOneWidget);
-    expect(find.text('Cajero (demo)'), findsOneWidget);
-
-    // Tapping demo chip fills inputs
-    final adminChip = find.text('Admin (demo)');
-    await tester.ensureVisible(adminChip);
-    await tester.pumpAndSettle();
-    await tester.tap(adminChip);
-    await tester.pumpAndSettle();
-
-    expect(find.text('admin@texasburger.com'), findsOneWidget);
+    expect(find.textContaining('(demo)'), findsNothing);
   });
 
-  testWidgets('ForgotPasswordScreen renders input and validation', (tester) async {
+  testWidgets('ForgotPasswordScreen renders input and validation', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestable(const ForgotPasswordScreen()));
     await tester.pumpAndSettle();
 
@@ -60,18 +53,23 @@ void main() {
     expect(find.text('Ingresa tu correo electrónico.'), findsOneWidget);
   });
 
-  testWidgets('AdminRegisterUserScreen shows restricted view when user is not admin', (tester) async {
-    UserRoleService().switchToUser();
-    await AppAuthService().signOut();
+  testWidgets(
+    'AdminRegisterUserScreen shows restricted view when user is not admin',
+    (tester) async {
+      UserRoleService().switchToUser();
+      await AppAuthService().signOut();
 
-    await tester.pumpWidget(buildTestable(const AdminRegisterUserScreen()));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(buildTestable(const AdminRegisterUserScreen()));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Acceso Restringido'), findsOneWidget);
-  });
+      expect(find.text('Acceso Restringido'), findsOneWidget);
+    },
+  );
 
-  testWidgets('AdminRegisterUserScreen renders registration form when user is admin', (tester) async {
-    UserRoleService().loginAdmin('admin', 'admin');
+  testWidgets('AdminRegisterUserScreen renders form for verified admin', (
+    tester,
+  ) async {
+    authenticateAsTestUser();
 
     await tester.pumpWidget(buildTestable(const AdminRegisterUserScreen()));
     await tester.pumpAndSettle();
@@ -86,4 +84,3 @@ void main() {
     expect(find.text('Registrar Colaborador'), findsOneWidget);
   });
 }
-

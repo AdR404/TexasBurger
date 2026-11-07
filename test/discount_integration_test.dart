@@ -11,7 +11,7 @@ import 'package:texas_burger/services/discount_code_service.dart';
 import 'package:texas_burger/services/export_service.dart';
 import 'package:texas_burger/services/pricing_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
-import 'package:texas_burger/services/user_role_service.dart';
+import 'support/auth_fixtures.dart';
 
 List<VentaItem> items(double price, {String id = 'test', int quantity = 1}) => [
   VentaItem(
@@ -44,9 +44,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    UserRoleService().switchToUser();
+    clearTestSession();
   });
-  tearDown(() => UserRoleService().switchToUser());
+  tearDown(clearTestSession);
 
   test('included IVA preserves price and splits base and tax', () {
     final calc = PricingService.calculate(items: items(116));
@@ -146,7 +146,7 @@ void main() {
       });
       final service = DiscountCodeService.forTesting();
       await service.init();
-      UserRoleService().loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await Future.wait([
         service.save(coupon(code: ' diez ')),
         service.save(coupon(code: 'DOS', value: 2)),
@@ -172,7 +172,7 @@ void main() {
       expect(prefs.getString('texas_staff_context'), 'original');
       expect(prefs.getString('texas_products'), 'original');
       final before = prefs.getString('texas_discount_codes');
-      UserRoleService().switchToUser();
+      clearTestSession();
       await expectLater(restarted.save(coupon()), throwsStateError);
       await expectLater(restarted.setActive('DIEZ', false), throwsStateError);
       await expectLater(restarted.remove('DIEZ'), throwsStateError);
@@ -189,7 +189,7 @@ void main() {
       final service = DiscountCodeService.forTesting();
       await service.init();
       expect(service.loadFailed, isTrue);
-      UserRoleService().loginAdmin('admin', 'admin');
+      authenticateAsTestUser();
       await expectLater(service.save(coupon()), throwsStateError);
       expect(
         (await SharedPreferences.getInstance()).getString(

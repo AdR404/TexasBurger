@@ -1,4 +1,3 @@
-import 'package:texas_burger/services/user_role_service.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +10,7 @@ import 'package:texas_burger/models/venta_item.dart';
 import 'package:texas_burger/services/caja_service.dart';
 import 'package:texas_burger/services/export_service.dart';
 import 'package:texas_burger/services/sales_service.dart';
+import 'support/auth_fixtures.dart';
 
 final ana = StaffCatalog.selection('perimetral_sur', 'demo_ana_torres');
 final luis = StaffCatalog.selection('perimetral_sur', 'demo_luis_garcia');
@@ -54,9 +54,9 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    UserRoleService().switchToUser();
+    clearTestSession();
   });
-  tearDown(() => UserRoleService().switchToUser());
+  tearDown(clearTestSession);
 
   test(
     'catalog IDs are stable and demo staff have no numeric user mapping',
@@ -184,7 +184,10 @@ void main() {
     () async {
       final caja = CajaService.forTesting();
       await caja.init();
-      UserRoleService().loginAdmin('admin', 'admin');
+      authenticateAsTestUser(
+        employeeId: ana.employeeId,
+        employeeName: ana.employeeName,
+      );
       await caja.abrirCaja(500, saleContext: ana);
       await caja.updateSaleContext(luis);
       await expectLater(caja.updateSaleContext(norte), throwsStateError);

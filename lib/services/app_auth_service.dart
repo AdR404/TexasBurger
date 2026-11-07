@@ -82,6 +82,9 @@ class AppAuthService extends ChangeNotifier {
   StreamSubscription<AuthState>? _subscription;
   Timer? _expiry;
   AuthUser? _user;
+  AuthUser? _testUser;
+  Map<String, String> _testBranches = const {};
+  bool _testSessionEnabled = false;
   bool _loading = false;
   bool _signingIn = false;
   bool _recovering = false;
@@ -94,19 +97,39 @@ class AppAuthService extends ChangeNotifier {
   int _revision = 0;
   String? message;
   Map<String, String> _branches = {};
-  Map<String, String> get branches => Map.unmodifiable(_branches);
-  AuthUser? get currentUser => isAuthenticated ? _user : null;
-  bool get isAuthenticated =>
-      !_recovering &&
-      !_loading &&
-      _user != null &&
-      _client?.auth.currentSession?.isExpired == false &&
-      _client?.auth.currentUser?.id == _user!.id;
+  Map<String, String> get branches =>
+      Map.unmodifiable(_testSessionEnabled ? _testBranches : _branches);
+  AuthUser? get currentUser => _testSessionEnabled
+      ? _testUser
+      : isAuthenticated
+      ? _user
+      : null;
+  bool get isAuthenticated => _testSessionEnabled
+      ? _testUser != null
+      : !_recovering &&
+            !_loading &&
+            _user != null &&
+            _client?.auth.currentSession?.isExpired == false &&
+            _client?.auth.currentUser?.id == _user!.id;
   bool get isLoading => _loading;
   bool get isAdmin => currentUser?.isAdmin ?? false;
   String? get currentUserName => currentUser?.name;
   String? get currentUserEmail => currentUser?.email;
   String get currentUserRole => currentUser?.role ?? 'cajero';
+
+  @visibleForTesting
+  void setTestSessionForTesting({
+    AuthUser? user,
+    Map<String, String> branches = const {},
+  }) {
+    assert(() {
+      _testSessionEnabled = true;
+      _testUser = user;
+      _testBranches = Map.unmodifiable(branches);
+      return true;
+    }());
+    notifyListeners();
+  }
 
   Future<void> init({SupabaseClient? client}) async {
     final prefs = await SharedPreferences.getInstance();
@@ -179,6 +202,9 @@ class AppAuthService extends ChangeNotifier {
   void _clear() {
     _revision++;
     _recovering = false;
+    _testSessionEnabled = false;
+    _testUser = null;
+    _testBranches = const {};
     _expiry?.cancel();
     _user = null;
     _branches = {};
@@ -311,8 +337,9 @@ class AppAuthService extends ChangeNotifier {
           'Supabase no está disponible. Reinicia con conexión.',
         );
       }
+      final normalizedEmail = email.trim().toLowerCase();
       await client.auth
-          .signInWithPassword(email: email.trim(), password: password)
+          .signInWithPassword(email: normalizedEmail, password: password)
           .timeout(const Duration(seconds: 20));
       await refresh();
       return isAuthenticated
@@ -458,7 +485,10 @@ class AppAuthService extends ChangeNotifier {
     try {
       if (_client == null) throw StateError('Sin conexión');
       await _client!.auth
-          .resetPasswordForEmail(email.trim(), redirectTo: authRedirect)
+          .resetPasswordForEmail(
+            email.trim().toLowerCase(),
+            redirectTo: authRedirect,
+          )
           .timeout(const Duration(seconds: 15));
       return const AuthResult(
         success: true,

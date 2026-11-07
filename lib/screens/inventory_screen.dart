@@ -238,11 +238,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final search = _search.trim().toLowerCase();
 
     final displayedLots = _demoMode
-      ? InventoryDemoData.create()
-      : (_data?.lots ?? const <InventoryLot>[]);
+        ? InventoryDemoData.create()
+        : (_data?.lots ?? const <InventoryLot>[]);
     final ingredientNames = _demoMode
-      ? IngredientCatalog.defaultIngredients
-      : (_data?.ingredients.map((i) => i.name).toList() ?? <String>[]);
+        ? IngredientCatalog.defaultIngredients
+        : (_data?.ingredients.map((i) => i.name).toList() ?? <String>[]);
 
     final totalIngredients = ingredientNames.length;
 
@@ -441,9 +441,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-                  onPressed: _working || _loading || _data == null
-                    ? null
-                    : _addLot,
+              onPressed: _working || _loading || (!_demoMode && _data == null)
+                  ? null
+                  : _addLot,
               child: const Text('Agregar lote'),
             ),
           ),
@@ -453,7 +453,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-                onPressed: _working || _loading || _data == null
+              onPressed: _working || _loading || (!_demoMode && _data == null)
                   ? null
                   : _movements,
               child: const Text('Movimientos de inventario'),
@@ -559,7 +559,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             Text(
                               '${ingredientLots.length} lote(s) '
                               '· $locations\n'
-                              'Existencia registrada: '
+                              '${_demoMode ? 'Existencia simulada' : 'Existencia registrada'}: '
                               '${inventoryAvailableText(ingredientLots)}',
                               style: const TextStyle(
                                 color: AppTheme.textMuted,
@@ -595,6 +595,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       builder: (_) => InventoryLotDetailSheet(
                         ingredientName: ingredient,
                         lots: ingredientLots,
+                        isDemo: _demoMode,
                       ),
                     );
                   },

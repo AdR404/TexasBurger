@@ -1,4 +1,4 @@
-import 'package:texas_burger/services/user_role_service.dart';
+import 'support/auth_fixtures.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -94,8 +94,8 @@ void main() {
       });
       final service = ProductService.forTesting();
       await service.init();
-      UserRoleService().loginAdmin('admin', 'admin');
-      addTearDown(() => UserRoleService().switchToUser());
+      authenticateAsTestUser();
+      addTearDown(clearTestSession);
       await service.updatePrice(product.id, 160);
       await service.toggleAvailability(product.id);
       final restarted = ProductService.forTesting();

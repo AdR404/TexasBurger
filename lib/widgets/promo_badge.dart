@@ -1,15 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class PromoBadge extends StatelessWidget {
   final String text;
   final bool isSpecial;
 
-  const PromoBadge({
-    super.key,
-    required this.text,
-    this.isSpecial = false,
-  });
+  const PromoBadge({super.key, required this.text, this.isSpecial = false});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +16,9 @@ class PromoBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: (isSpecial ? AppTheme.gold : AppTheme.promo).withValues(alpha: 0.3),
+            color: (isSpecial ? AppTheme.gold : AppTheme.promo).withValues(
+              alpha: 0.3,
+            ),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -31,7 +29,7 @@ class PromoBadge extends StatelessWidget {
         children: [
           Icon(
             isSpecial ? Icons.star_rounded : Icons.local_fire_department,
-            color: isSpecial ? AppTheme.navyBlue : Colors.white,
+            color: isSpecial ? AppTheme.textDark : AppTheme.gold,
             size: 14,
           ),
           const SizedBox(width: 4),

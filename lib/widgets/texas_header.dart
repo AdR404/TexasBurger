@@ -5,18 +5,14 @@ class TexasHeader extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
 
-  const TexasHeader({
-    super.key,
-    this.subtitle,
-    this.trailing,
-  });
+  const TexasHeader({super.key, this.subtitle, this.trailing});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
-        color: AppTheme.texasYellow,
+        color: AppTheme.intenseFire,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.10),
@@ -37,9 +33,12 @@ class TexasHeader extends StatelessWidget {
                 children: [
                   Container(
                     height: 54,
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.goldLight,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Image.asset(
@@ -54,22 +53,32 @@ class TexasHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.goldLight,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.gold, width: 1.2),
+                      border: Border.all(
+                        color: AppTheme.alabamaCrimson,
+                        width: 1.2,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.calendar_month, size: 14, color: AppTheme.navyBlue),
+                        const Icon(
+                          Icons.calendar_month,
+                          size: 14,
+                          color: AppTheme.alabamaCrimson,
+                        ),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             subtitle ?? _fechaHoy(),
                             style: const TextStyle(
-                              color: AppTheme.navyBlue,
+                              color: AppTheme.alabamaCrimson,
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                             ),
@@ -88,7 +97,7 @@ class TexasHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppTheme.navyBlue,
+                  color: AppTheme.alabamaCrimson,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: trailing!,
@@ -101,7 +110,15 @@ class TexasHeader extends StatelessWidget {
   }
 
   static String _fechaHoy() {
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const dias = [
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ];
     final d = DateTime.now();
     final dd = d.day.toString().padLeft(2, '0');
     final mm = d.month.toString().padLeft(2, '0');

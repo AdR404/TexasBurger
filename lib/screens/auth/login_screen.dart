@@ -43,10 +43,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: AppTheme.navyBlue,
+          backgroundColor: AppTheme.lapisLazuli,
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: AppTheme.gold),
+              const Icon(Icons.check_circle, color: AppTheme.intenseFire),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.creamBg,
+      backgroundColor: AppTheme.bananaMania,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -80,83 +80,87 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo de Texas Burger
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.borderLight,
-                          width: 1.5,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 22,
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    decoration: BoxDecoration(
+                      color: AppTheme.intenseFire,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.burgundy.withValues(alpha: 0.12),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
                           ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo.jpeg',
-                        height: 70,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Image.asset(
-                              'assets/images/logo.png',
-                              height: 70,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.lunch_dining,
-                                    color: AppTheme.primary,
-                                    size: 54,
-                                  ),
-                            ),
-                      ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Image.asset(
+                            'assets/images/logo.jpeg',
+                            height: 58,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Image.asset(
+                                  'assets/images/logo.png',
+                                  height: 58,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.lunch_dining,
+                                        color: AppTheme.lapisLazuli,
+                                        size: 48,
+                                      ),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Iniciar Sesión',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.burgundy,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Punto de Venta y Control Operativo',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.burgundy,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Título y Subtítulo
-                  const Text(
-                    'Iniciar Sesión',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navyBlue,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Punto de Venta y Control Operativo',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-
                   const SizedBox(height: 24),
 
                   // Tarjeta del formulario
                   Card(
-                    color: Colors.white,
+                    color: AppTheme.cardBg,
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: const BorderSide(
                         color: AppTheme.borderLight,
-                        width: 1.2,
+                        width: 0.8,
                       ),
                     ),
                     child: Padding(
@@ -214,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: AppTheme.navyBlue,
+                                color: AppTheme.burgundy,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -231,33 +235,35 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 prefixIcon: const Icon(
                                   Icons.alternate_email,
-                                  color: AppTheme.navyBlueLight,
+                                  color: AppTheme.burgundy,
                                   size: 20,
                                 ),
                                 filled: true,
-                                fillColor: AppTheme.primarySoft.withValues(
-                                  alpha: 0.35,
-                                ),
+                                fillColor: AppTheme.goldSoft,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 14,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppTheme.borderLight,
+                                  borderSide: BorderSide(
+                                    color: AppTheme.intenseFire.withValues(
+                                      alpha: 0.35,
+                                    ),
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppTheme.borderLight,
+                                  borderSide: BorderSide(
+                                    color: AppTheme.intenseFire.withValues(
+                                      alpha: 0.35,
+                                    ),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                    color: AppTheme.navyBlue,
+                                    color: AppTheme.burgundy,
                                     width: 1.8,
                                   ),
                                 ),
@@ -281,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: AppTheme.navyBlue,
+                                color: AppTheme.burgundy,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -298,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 prefixIcon: const Icon(
                                   Icons.lock_outline,
-                                  color: AppTheme.navyBlueLight,
+                                  color: AppTheme.burgundy,
                                   size: 20,
                                 ),
                                 suffixIcon: IconButton(
@@ -306,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _obscurePassword
                                         ? Icons.visibility_outlined
                                         : Icons.visibility_off_outlined,
-                                    color: AppTheme.navyBlue,
+                                    color: AppTheme.burgundy,
                                     size: 20,
                                   ),
                                   onPressed: () {
@@ -316,29 +322,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                 ),
                                 filled: true,
-                                fillColor: AppTheme.primarySoft.withValues(
-                                  alpha: 0.35,
-                                ),
+                                fillColor: AppTheme.goldSoft,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 14,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppTheme.borderLight,
+                                  borderSide: BorderSide(
+                                    color: AppTheme.intenseFire.withValues(
+                                      alpha: 0.35,
+                                    ),
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppTheme.borderLight,
+                                  borderSide: BorderSide(
+                                    color: AppTheme.intenseFire.withValues(
+                                      alpha: 0.35,
+                                    ),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                    color: AppTheme.navyBlue,
+                                    color: AppTheme.burgundy,
                                     width: 1.8,
                                   ),
                                 ),
@@ -371,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     horizontal: 6,
                                     vertical: 4,
                                   ),
-                                  foregroundColor: AppTheme.navyBlue,
+                                  foregroundColor: AppTheme.burgundy,
                                 ),
                                 child: const Text(
                                   '¿Olvidaste tu contraseña?',
@@ -394,8 +402,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return ElevatedButton(
                                   onPressed: loading ? null : _handleLogin,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primary,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: AppTheme.burgundy,
+                                    foregroundColor: AppTheme.cardBg,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 16,
                                     ),
@@ -409,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           height: 22,
                                           width: 22,
                                           child: CircularProgressIndicator(
-                                            color: Colors.white,
+                                            color: AppTheme.cardBg,
                                             strokeWidth: 2.4,
                                           ),
                                         )

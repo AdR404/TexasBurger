@@ -52,12 +52,18 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   void _addToCart(Producto product) {
     setState(() {
       final index = _cartItems.indexWhere(
-        (item) => item.product.id == product.id && item.selectedExtras.isEmpty && item.removedIngredients.isEmpty && item.notes.isEmpty,
+        (item) =>
+            item.product.id == product.id &&
+            item.selectedExtras.isEmpty &&
+            item.removedIngredients.isEmpty &&
+            item.notes.isEmpty,
       );
       if (index != -1) {
         _cartItems[index].quantity++;
       } else {
-        _cartItems.add(VentaItem(product: product, quantity: 1, unitPrice: product.price));
+        _cartItems.add(
+          VentaItem(product: product, quantity: 1, unitPrice: product.price),
+        );
       }
     });
   }
@@ -75,7 +81,9 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${customItem.quantity}x ${product.displayName} personalizado agregado a la orden.'),
+            content: Text(
+              '${customItem.quantity}x ${product.displayName} personalizado agregado a la orden.',
+            ),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
               label: 'Ver orden',
@@ -90,7 +98,9 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
 
   void _incrementCart(String productId) {
     setState(() {
-      final index = _cartItems.indexWhere((item) => item.product.id == productId);
+      final index = _cartItems.indexWhere(
+        (item) => item.product.id == productId,
+      );
       if (index != -1) {
         _cartItems[index].quantity++;
       }
@@ -99,7 +109,9 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
 
   void _decrementCart(String productId) {
     setState(() {
-      final index = _cartItems.indexWhere((item) => item.product.id == productId);
+      final index = _cartItems.indexWhere(
+        (item) => item.product.id == productId,
+      );
       if (index != -1) {
         if (_cartItems[index].quantity > 1) {
           _cartItems[index].quantity--;
@@ -172,56 +184,66 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
           _clearCart();
           Navigator.pop(ctx);
         },
-        onConfirmSale: ({
-          required paymentMethod,
-          required cashGiven,
-          required changeReturned,
-          required calc,
-          required orderType,
-          tableNumber,
-          customerName,
-          customerPhone,
-          deliveryAddress,
-        }) async {
-          if (_saving) return;
-          _saving = true;
-          Navigator.pop(ctx);
-          try {
-          final sale = await _salesService.registerSale(
-            saleContext: saleContext,
-            items: _cartItems,
-            subtotal: calc.subtotal,
-            discount: calc.discount,
-            iva: calc.iva,
-            ivaRate: calc.ivaRate,
-            ivaIncluded: true,
-            discountCode: calc.discountCode,
-            total: calc.total,
-            paymentMethod: paymentMethod,
-            cashGiven: cashGiven,
-            changeReturned: changeReturned,
-            orderType: orderType,
-            tableNumber: tableNumber,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            deliveryAddress: deliveryAddress,
-          );
-          _clearCart();
+        onConfirmSale:
+            ({
+              required paymentMethod,
+              required cashGiven,
+              required changeReturned,
+              required calc,
+              required orderType,
+              tableNumber,
+              customerName,
+              customerPhone,
+              deliveryAddress,
+            }) async {
+              if (_saving) return;
+              _saving = true;
+              Navigator.pop(ctx);
+              try {
+                final sale = await _salesService.registerSale(
+                  saleContext: saleContext,
+                  items: _cartItems,
+                  subtotal: calc.subtotal,
+                  discount: calc.discount,
+                  iva: calc.iva,
+                  ivaRate: calc.ivaRate,
+                  ivaIncluded: true,
+                  discountCode: calc.discountCode,
+                  total: calc.total,
+                  paymentMethod: paymentMethod,
+                  cashGiven: cashGiven,
+                  changeReturned: changeReturned,
+                  orderType: orderType,
+                  tableNumber: tableNumber,
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  deliveryAddress: deliveryAddress,
+                );
+                _clearCart();
 
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (dCtx) => TicketDialog(venta: sale),
-            );
-          }
-          } catch (error) {
-            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(error is StateError ? error.message.toString() : 'No se pudo completar la venta. Revisa BD antes de repetir el cobro.'),
-              duration: const Duration(seconds: 12))); }
-          } finally {
-            _saving = false;
-          }
-        },
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (dCtx) => TicketDialog(venta: sale),
+                  );
+                }
+              } catch (error) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        error is StateError
+                            ? error.message.toString()
+                            : 'No se pudo completar la venta. Revisa BD antes de repetir el cobro.',
+                      ),
+                      duration: const Duration(seconds: 12),
+                    ),
+                  );
+                }
+              } finally {
+                _saving = false;
+              }
+            },
       ),
     );
   }
@@ -230,20 +252,32 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   Widget build(BuildContext context) {
     final products = _productService.availableProducts;
     final filtered = products.where((p) {
-      if (_selectedCategory == 'Promociones' && !p.isPromo) return false;
-      if (_selectedCategory == 'Hamburguesas' && (p.category != 'Hamburguesas' || p.isPromo)) return false;
-      if (_selectedCategory == 'Complementos' && p.category != 'Complementos') return false;
-      if (_selectedCategory == 'Bebidas' && p.category != 'Bebidas') return false;
+      if (_selectedCategory == 'Promociones' && !p.isPromo) {
+        return false;
+      }
+      if (_selectedCategory == 'Hamburguesas' &&
+          (p.category != 'Hamburguesas' || p.isPromo)) {
+        return false;
+      }
+      if (_selectedCategory == 'Complementos' && p.category != 'Complementos') {
+        return false;
+      }
+      if (_selectedCategory == 'Bebidas' && p.category != 'Bebidas') {
+        return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        return p.name.toLowerCase().contains(query) || p.description.toLowerCase().contains(query);
+        return p.name.toLowerCase().contains(query) ||
+            p.description.toLowerCase().contains(query);
       }
       return true;
     }).toList();
 
     final calc = PricingService.calculate(
       items: _cartItems,
-      coupon: _couponCode == null ? null : DiscountCodeService().findActive(_couponCode!),
+      coupon: _couponCode == null
+          ? null
+          : DiscountCodeService().findActive(_couponCode!),
     );
     final totalItems = _cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
 
@@ -252,22 +286,30 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       body: Column(
         children: [
           Container(
-            color: AppTheme.creamBg,
+            color: AppTheme.intenseFire,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Column(
               children: [
                 const StaffContextBar(),
                 const SizedBox(height: 8),
                 TextField(
+                  style: const TextStyle(color: Colors.white),
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
                     hintText: 'Buscar hamburguesa, papas, bebida...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.navyBlue),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.goldLight,
+                    ),
+                    hintStyle: const TextStyle(color: AppTheme.goldLight),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppTheme.navyBlue,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -303,7 +345,8 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
                     itemCount: filtered.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final product = filtered[index];
                       final inCartCount = _getCartQuantity(product.id);
@@ -312,9 +355,14 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                         margin: EdgeInsets.zero,
                         color: Colors.white,
                         elevation: 1,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -325,7 +373,9 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (product.isPromo) ...[
-                                      PromoBadge(text: product.promoNote ?? 'Promoción'),
+                                      PromoBadge(
+                                        text: product.promoNote ?? 'Promoción',
+                                      ),
                                       const SizedBox(height: 4),
                                     ],
                                     Text(
@@ -361,21 +411,42 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (product.availableExtras.isNotEmpty || product.category == 'Hamburguesas') ...[
+                                        if (product
+                                                .availableExtras
+                                                .isNotEmpty ||
+                                            product.category ==
+                                                'Hamburguesas') ...[
                                           const SizedBox(width: 4),
                                           InkWell(
-                                            onTap: () => _openCustomizer(product),
-                                            borderRadius: BorderRadius.circular(6),
+                                            onTap: () =>
+                                                _openCustomizer(product),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                             child: const Padding(
-                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.tune, size: 14, color: AppTheme.navyBlue),
+                                                  Icon(
+                                                    Icons.tune,
+                                                    size: 14,
+                                                    color:
+                                                        AppTheme.alabamaCrimson,
+                                                  ),
                                                   SizedBox(width: 4),
                                                   Text(
                                                     'Personalizar',
-                                                    style: TextStyle(fontSize: 11, color: AppTheme.navyBlue, fontWeight: FontWeight.bold),
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppTheme
+                                                          .alabamaCrimson,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -392,13 +463,15 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                 ElevatedButton(
                                   onPressed: () => _addToCart(product),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primary,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
+                                    backgroundColor: AppTheme.intenseFire,
+                                    foregroundColor: AppTheme.textDark,
+                                    elevation: 2,
                                     padding: EdgeInsets.zero,
-                                    minimumSize: const Size(36, 36),
-                                    fixedSize: const Size(36, 36),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    minimumSize: const Size(48, 48),
+                                    fixedSize: const Size(48, 48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                   ),
                                   child: const Icon(Icons.add, size: 20),
                                 )
@@ -414,12 +487,18 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                         borderRadius: BorderRadius.circular(10),
                                         child: const Padding(
                                           padding: EdgeInsets.all(8),
-                                          child: Icon(Icons.remove, size: 18, color: AppTheme.navyBlue),
+                                          child: Icon(
+                                            Icons.remove,
+                                            size: 18,
+                                            color: AppTheme.navyBlue,
+                                          ),
                                         ),
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
                                       child: Text(
                                         '$inCartCount',
                                         style: const TextStyle(
@@ -437,7 +516,11 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                                         borderRadius: BorderRadius.circular(10),
                                         child: const Padding(
                                           padding: EdgeInsets.all(8),
-                                          child: Icon(Icons.add, size: 18, color: Colors.white),
+                                          child: Icon(
+                                            Icons.add,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -469,14 +552,21 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primary,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '$totalItems',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -487,11 +577,18 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                         children: [
                           const Text(
                             'Total de la orden',
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                           Text(
                             '\$${calc.total.toStringAsFixed(2)}',
-                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ],
                       ),
@@ -503,8 +600,13 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ],
@@ -540,9 +642,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(30),
-        side: BorderSide(
-          color: isSelected ? AppTheme.navyBlue : Colors.white,
-        ),
+        side: BorderSide(color: isSelected ? AppTheme.navyBlue : Colors.white),
       ),
       onSelected: (val) {
         setState(() {

@@ -134,7 +134,9 @@ Future<bool> selectStaffContext(BuildContext context, CajaService caja) async {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No se pudo cambiar la sucursal. Comprueba que no haya un turno u operación en curso.'),
+          content: Text(
+            'No se pudo cambiar la sucursal. Comprueba que no haya un turno u operación en curso.',
+          ),
         ),
       );
     }
@@ -156,15 +158,15 @@ class StaffContextBar extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.goldLight,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderLight),
+            border: Border.all(color: AppTheme.gold),
           ),
           child: Row(
             children: [
               const Icon(
                 Icons.badge_outlined,
-                color: AppTheme.navyBlue,
+                color: AppTheme.alabamaCrimson,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -174,16 +176,18 @@ class StaffContextBar extends StatelessWidget {
                   'Sucursal operativa: ${selection?.branchName ?? "Selecciona una sucursal"}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: AppTheme.navyBlue,
+                    color: AppTheme.textDark,
                   ),
                 ),
               ),
-              if (AppAuthService().isAdmin && AppAuthService().currentUser?.branchId == null)
-              TextButton(
-                onPressed: !enabled || caja.remoteBusy || caja.isBranchLocked
-                    ? null : () => selectStaffContext(context, caja),
-                child: Text(selection == null ? 'Seleccionar' : 'Cambiar'),
-              ),
+              if (AppAuthService().isAdmin &&
+                  AppAuthService().currentUser?.branchId == null)
+                TextButton(
+                  onPressed: !enabled || caja.remoteBusy || caja.isBranchLocked
+                      ? null
+                      : () => selectStaffContext(context, caja),
+                  child: Text(selection == null ? 'Seleccionar' : 'Cambiar'),
+                ),
             ],
           ),
         );

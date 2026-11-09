@@ -95,8 +95,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     };
     return NavigationDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(selectedIcon, color: AppTheme.primary),
+      icon: Icon(icon, color: AppTheme.goldLight),
+      selectedIcon: Icon(selectedIcon, color: Colors.white),
       label: label,
     );
   }

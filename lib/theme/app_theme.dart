@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Paleta de Texas Burger (opción A, "Marino").
-///
-/// Regla general: el rojo ya no es el color de toda la app. Se usa solo para
-/// la marca, las promociones y descuentos, y las acciones de peligro.
-/// El color principal (acciones, selección, totales, íconos) es el azul marino.
+/// Paleta de Texas Burger: ámbar y crema con acentos vino y azul.
 class AppTheme {
   // ---------------------------------------------------------------------------
   // Colores base de la marca (los del logo)
@@ -15,12 +11,13 @@ class AppTheme {
   static const Color lapisLazuli = Color(0xFF236092);
   static const Color navyBlue = lapisLazuli;
   static const Color navyBlueLight = Color(0xFF3477A8);
+  static const Color burgundy = Color(0xFF5B0008);
   static const Color gold = intenseFire;
   static const Color goldLight = Color(0xFFFFF3D1);
   static const Color texasYellow = intenseFire;
   static const Color creamBg = bananaMania;
   static const Color cardBg = Colors.white;
-  static const Color textDark = Color(0xFF181B1F);
+  static const Color textDark = burgundy;
   static const Color textMuted = Color(0xFF6A7280);
   static const Color borderLight = Color(0xFFE8D8B5);
   static const Color successGreen = Color(0xFF10B981);
@@ -30,7 +27,7 @@ class AppTheme {
   // Roles de color: usa estos nombres en las pantallas, no el color directo.
   // ---------------------------------------------------------------------------
 
-  /// Acciones principales, elementos seleccionados, totales e íconos.
+  /// Acciones generales, elementos seleccionados, totales e íconos.
   static const Color primary = navyBlue;
 
   /// Fondo suave del color principal (círculos de ícono, chips, filas).
@@ -110,10 +107,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -124,10 +118,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -140,11 +131,13 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: const NavigationBarThemeData(
-        indicatorColor: primarySoft,
+        backgroundColor: burgundy,
+        indicatorColor: primary,
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(color: goldLight, fontWeight: FontWeight.w700),
+        ),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: primary,
-      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: primary),
       dividerTheme: const DividerThemeData(
         color: borderLight,
         thickness: 1,

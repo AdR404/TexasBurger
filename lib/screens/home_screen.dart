@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   _Section _selected = _Section.sale;
 
   List<_Section> get _destinations => _roleService.isAdmin
-      ? _Section.values
+      ? [_Section.sale, _Section.history, _Section.caja, _Section.catalog]
       : [_Section.sale, _Section.catalog, _Section.history];
   final UserRoleService _roleService = UserRoleService();
 

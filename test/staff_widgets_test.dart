@@ -477,8 +477,9 @@ void main() {
               find.byType(NavigationDestination),
             )
             .map((d) => d.label),
-        ['Venta', 'Dashboard', 'Historial', 'Caja', 'Menú'],
+        ['Venta', 'Historial', 'Caja', 'Menú'],
       );
+      expect(find.text('Dashboard'), findsNothing);
       expect(find.text('Añadir artículo / promo'), findsOneWidget);
 
       await tester.ensureVisible(find.byTooltip('Editar precio').first);
@@ -605,7 +606,7 @@ void main() {
         expect(find.byType(screens[index]), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
-      for (final restrictedIndex in [1, 3, 1, 3]) {
+      for (final restrictedIndex in [2, 2]) {
         authenticateAsTestUser();
         await tester.pumpAndSettle();
         await tester.tap(
@@ -637,7 +638,7 @@ void main() {
       tester.view.physicalSize = const Size(400, 900);
       authenticateAsTestUser();
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(NavigationDestination).at(3));
+      await tester.tap(find.byType(NavigationDestination).at(2));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abrir caja / iniciar turno'));
       await tester.pumpAndSettle();

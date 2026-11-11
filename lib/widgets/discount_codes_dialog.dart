@@ -20,12 +20,13 @@ class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
   final TextEditingController _valueController = TextEditingController();
   DiscountKind _kind = DiscountKind.percentage;
   String? _error;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _service.addListener(_refresh);
-    _service.init();
+    _loadCoupons();
   }
 
   @override
@@ -39,6 +40,12 @@ class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
 
   void _refresh() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadCoupons() async {
+    setState(() => _loading = true);
+    await _service.refresh();
+    if (mounted) setState(() => _loading = false);
   }
 
   bool _busy = false;
@@ -108,16 +115,25 @@ class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
   Widget _buildAdmin(BuildContext context) {
     return AlertDialog(
       scrollable: true,
-      title: const Text('Códigos locales'),
+      title: const Text('Cupones'),
       content: SizedBox(
         width: 420,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_service.loadFailed)
-              const Text(
-                'No se pudieron cargar los códigos. Los datos guardados no se han modificado.',
-              ),
+          if (_service.loadFailed)
+            Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                    const Text(
+                        'No se pudieron consultar los cupones en la base de datos. Revisa la conexión, la tabla y los permisos.',
+                    ),
+                    TextButton(
+                        onPressed: _loading ? null : _loadCoupons,
+                        child: const Text('Reintentar'),
+                    ),
+                ],
+            ),
             TextField(
               controller: _codeController,
               textCapitalization: TextCapitalization.characters,
@@ -189,9 +205,17 @@ class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
             ),
             const Divider(height: 12),
             SizedBox(
-              height: 180,
-              child: _service.codes.isEmpty
-                  ? const Center(child: Text('Aún no hay códigos guardados.'))
+            height: 180,
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _service.loadFailed
+                ? const SizedBox.shrink()
+                : _service.codes.isEmpty
+                ? const Center(
+                    child: Text(
+                        'Aún no hay cupones en la base de datos.',
+                    ),
+                )
                   : ListView.separated(
                       itemCount: _service.codes.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),

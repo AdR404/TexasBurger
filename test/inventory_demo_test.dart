@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/data/inventory_demo_data.dart';
 import 'package:texas_burger/screens/inventory_screen.dart';
 import 'package:texas_burger/theme/app_theme.dart';
@@ -11,14 +12,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    BuildFlags.resetDemoDataForTesting();
     SharedPreferences.setMockInitialValues({});
     authenticateAsTestUser();
   });
-  tearDown(clearTestSession);
+  tearDown(() {
+    clearTestSession();
+    BuildFlags.resetDemoDataForTesting();
+  });
 
   testWidgets(
     'demo inventory enables local actions and labels simulated data',
     (tester) async {
+      BuildFlags.setDemoDataEnabledForTesting(true);
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme,
@@ -49,6 +55,24 @@ void main() {
       );
     },
   );
+
+  testWidgets('production default hides demo control and simulated data', (
+    tester,
+  ) async {
+    BuildFlags.resetDemoDataForTesting();
+    expect(BuildFlags.demoDataEnabledByBuild, isFalse);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: InventoryScreen(onBack: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mostrar datos simulados'), findsNothing);
+    expect(find.textContaining('Existencia simulada'), findsNothing);
+    expect(find.text('Carne de res'), findsNothing);
+  });
 
   testWidgets('demo lot detail identifies simulated stock', (tester) async {
     await tester.pumpWidget(

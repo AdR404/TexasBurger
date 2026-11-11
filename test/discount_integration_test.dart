@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/discount_code.dart';
 import 'package:texas_burger/models/producto.dart';
@@ -43,10 +44,14 @@ DiscountCode coupon({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
+    BuildFlags.setDemoDataEnabledForTesting(true);
     SharedPreferences.setMockInitialValues({});
     clearTestSession();
   });
-  tearDown(clearTestSession);
+  tearDown(() {
+    clearTestSession();
+    BuildFlags.resetDemoDataForTesting();
+  });
 
   test('included IVA preserves price and splits base and tax', () {
     final calc = PricingService.calculate(items: items(116));

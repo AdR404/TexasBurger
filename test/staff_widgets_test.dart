@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/screens/home_screen.dart';
 import 'package:texas_burger/screens/quick_sale_screen.dart';
 import 'package:texas_burger/screens/daily_dashboard_screen.dart';
@@ -61,6 +62,7 @@ void main() {
   setUp(clearTestSession);
   tearDown(clearTestSession);
   setUpAll(() async {
+    BuildFlags.setDemoDataEnabledForTesting(true);
     // Carga la fuente Roboto del SDK de Flutter para las pruebas de interfaz
     final configFile = File('.dart_tool/package_config.json').absolute;
     final config =
@@ -79,6 +81,7 @@ void main() {
     )..addFont(font.readAsBytes().then((bytes) => ByteData.sublistView(bytes)));
     await loader.load();
   });
+  tearDownAll(BuildFlags.resetDemoDataForTesting);
   testWidgets(
     'authenticated employee is fixed while an admin selects a branch',
     (tester) async {

@@ -34,6 +34,8 @@ flutter run --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true
 
 **Importante:** utilizar el parámetro `TEXAS_ENABLE_SIMPLE_SALES=true` para habilitar el registro de ventas en Supabase.
 
+Los datos simulados del inventario están desactivados de forma predeterminada. Para probar su interfaz en una compilación de desarrollo, iniciar con `--dart-define=TEXAS_ENABLE_DEMO_DATA=true`. No habilites esta bandera en compilaciones de producción.
+
 ### Configuración de Supabase
 
 La aplicación utiliza el proyecto Supabase configurado en el código.

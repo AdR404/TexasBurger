@@ -1,3 +1,4 @@
+import '../config/build_flags.dart';
 import '../models/sale_context.dart';
 
 // Catálogo local de sucursales y personal de caja
@@ -7,11 +8,14 @@ class StaffCatalog {
     'norte': 'Norte',
   };
 
-  static const employees = {
+  static const _demoEmployees = {
     'demo_ana_torres': 'Ana Torres',
     'demo_luis_garcia': 'Luis García',
     'demo_sofia_reyes': 'Sofía Reyes',
   };
+
+  static Map<String, String> get employees =>
+      BuildFlags.demoDataEnabled ? _demoEmployees : const {};
 
   static SaleContext selection(String branchId, String employeeId) {
     if (!branches.containsKey(branchId) || !employees.containsKey(employeeId)) {

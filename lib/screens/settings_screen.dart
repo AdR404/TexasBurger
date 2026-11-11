@@ -309,25 +309,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             Container(
               margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: isAdmin
-                    ? AppTheme.gold.withValues(alpha: 0.15)
+                    ? AppTheme.goldLight
                     : Colors.blueGrey.shade50,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isAdmin ? AppTheme.gold : Colors.blueGrey.shade200,
-                  width: 1.5,
+                  width: 1.2,
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    isAdmin ? Icons.admin_panel_settings : Icons.lock_outline,
-                    color: isAdmin ? AppTheme.navyBlue : AppTheme.navyBlue,
-                    size: 24,
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isAdmin
+                          ? Icons.admin_panel_settings_outlined
+                          : Icons.lock_outline,
+                      color: AppTheme.navyBlue,
+                      size: 22,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 11),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,18 +347,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ? 'Modo administrador activo'
                               : 'Modo usuario (solo lectura del menú)',
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
                             color: AppTheme.navyBlue,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           isAdmin
-                              ? 'Tienes permisos para modificar precios, agregar productos y crear promociones.'
+                              ? 'Puedes modificar precios, administrar productos y crear promociones.'
                               : 'Solo consulta. Para modificar precios o agregar promociones/productos, ingresa con el botón superior.',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
+                            height: 1.3,
                             color: isAdmin ? AppTheme.navyBlue : AppTheme.textMuted,
                           ),
                         ),
@@ -361,7 +372,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // Tarjeta de la marca
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -377,8 +388,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -396,7 +407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,7 +441,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
             // Encabezado del catálogo con acción para Admin
             Row(

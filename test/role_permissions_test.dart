@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/producto.dart';
 import 'package:texas_burger/models/venta_item.dart';
@@ -15,13 +16,17 @@ import 'support/auth_fixtures.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final roles = UserRoleService();
-  final staff = StaffCatalog.selection('norte', 'demo_sofia_reyes');
+  late final staff = StaffCatalog.selection('norte', 'demo_sofia_reyes');
 
   setUp(() {
+    BuildFlags.setDemoDataEnabledForTesting(true);
     clearTestSession();
     SharedPreferences.setMockInitialValues({});
   });
-  tearDown(clearTestSession);
+  tearDown(() {
+    clearTestSession();
+    BuildFlags.resetDemoDataForTesting();
+  });
 
   test('all product names render in sentence case without changing JSON', () {
     for (final entry in {

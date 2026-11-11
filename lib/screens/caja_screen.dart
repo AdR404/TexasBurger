@@ -407,7 +407,7 @@ class _CajaScreenState extends State<CajaScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Aceptar')),
           ElevatedButton.icon(
             icon: const Icon(Icons.copy, size: 16),
-            label: const Text('Copiar para WhatsApp'),
+            label: const Text('Copiar'),
             onPressed: () {
               if (!UserRoleService().isAdmin) return;
               Clipboard.setData(ClipboardData(text: report));

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/discount_code.dart';
 import 'package:texas_burger/models/producto.dart';
@@ -36,6 +37,7 @@ void main() {
   );
 
   setUpAll(() async {
+    BuildFlags.setDemoDataEnabledForTesting(true);
     authenticateAsTestUser();
     final configFile = File('.dart_tool/package_config.json').absolute;
     final config =
@@ -63,6 +65,7 @@ void main() {
       StaffCatalog.selection('norte', 'demo_sofia_reyes'),
     );
   });
+  tearDownAll(BuildFlags.resetDemoDataForTesting);
   setUp(clearTestSession);
   tearDown(clearTestSession);
 

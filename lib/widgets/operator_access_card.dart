@@ -1,89 +1,115 @@
 import 'package:flutter/material.dart';
+import '../services/app_auth_service.dart';
 import '../services/db_service.dart';
 import '../services/operator_session.dart';
 import '../theme/app_theme.dart';
 
 /// Shows the same verified session used by the application login.
 class OperatorAccessCard extends StatelessWidget {
-  const OperatorAccessCard({
-    super.key,
-    this.session,
-    this.environmentLabel,
-    this.contextMessage,
-  });
+  const OperatorAccessCard({super.key, this.session});
   final OperatorSession? session;
-  final String? environmentLabel;
-  final String? contextMessage;
 
   @override
   Widget build(BuildContext context) {
     final controller = session ?? DbService.session;
-    final label =
-        environmentLabel ?? DbService.environment?.label ?? 'Sin configurar';
-    if (controller == null) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Sesión remota no disponible. El inventario requiere iniciar sesión; consulta el estado de ventas en Configuración.',
-          ),
-        ),
-      );
-    }
     return ListenableBuilder(
-      listenable: controller,
+      listenable: controller ?? AppAuthService(),
       builder: (context, _) {
-        final status = switch (controller.state) {
-          OperatorState.local => 'Sin sesión remota de inventario',
-          OperatorState.authenticated =>
-            controller.authenticated
-                ? 'Cuenta autenticada mediante Supabase'
-                : 'Sesión expirada',
-          OperatorState.checking => 'Comprobando sesión',
-          OperatorState.offline => 'Sesión sin conexión verificada',
-          OperatorState.expired => 'Sesión expirada',
-          OperatorState.error => 'Acceso remoto pendiente',
+        final user = AppAuthService().currentUser;
+        final isAdmin = user?.isAdmin ?? false;
+        final connected = controller?.authenticated ?? false;
+        final role = switch (user?.role) {
+          'admin' => 'Administrador',
+          'cajero' => 'Cajero',
+          _ => 'Sin sesión',
         };
+        final busy = controller?.busy ?? false;
+        final connectionStatus = busy
+            ? 'Comprobando...'
+            : connected
+            ? 'Conectado'
+            : 'Sin conexión';
+
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.manage_accounts_outlined,
+                      color: AppTheme.navyBlue,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Cuenta y acceso remoto',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.navyBlue,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ),
+                    _StatusChip(
+                      label: connectionStatus,
+                      connected: connected,
+                      checking: busy,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _AccessInfoRow(
+                  label: 'Estado de conexión',
+                  value: connectionStatus,
+                  valueColor: connected
+                      ? AppTheme.successGreen
+                      : AppTheme.danger,
+                ),
+                _AccessInfoRow(label: 'Rol', value: role),
+                _AccessInfoRow(
+                  label: 'Correo electrónico',
+                  value: controller?.email ?? user?.email ?? 'No disponible',
+                ),
+                _AccessInfoRow(
+                  label: 'Acceso al inventario',
+                  value: connected && isAdmin ? 'Autorizado' : 'No autorizado',
+                  valueColor: connected && isAdmin
+                      ? AppTheme.successGreen
+                      : AppTheme.danger,
+                ),
+                _AccessInfoRow(
+                  label: 'Permisos administrativos',
+                  value: isAdmin ? 'Activos' : 'Inactivos',
+                  valueColor: isAdmin
+                      ? AppTheme.successGreen
+                      : AppTheme.textMuted,
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  'Acceso remoto · $label',
+                  'El acceso administrativo y al inventario depende de los permisos de esta cuenta.',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.navyBlue,
+                    color: AppTheme.textMuted,
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(status),
-                if (controller.email != null) Text(controller.email!),
-                if (controller.sessionOperatorId != null)
-                  Text(
-                    'Operador: ${controller.sessionOperatorId}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                if (controller.message != null) Text(controller.message!),
-                const SizedBox(height: 8),
-                Text(
-                  contextMessage ??
-                      'Esta sesión permite acceder al inventario según los permisos de la cuenta. Las ventas dependen de la opción de guardado remoto y de la configuración de esta compilación.',
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (controller.sessionOperatorId != null) ...[
+                    if (controller?.sessionOperatorId != null) ...[
                       OutlinedButton(
-                        onPressed: controller.busy ? null : controller.refresh,
-                        child: const Text('Comprobar acceso'),
+                        onPressed: busy ? null : controller!.refresh,
+                        child: const Text('Comprobar conexión y permisos'),
                       ),
                       TextButton(
-                        onPressed: controller.busy ? null : controller.signOut,
-                        child: const Text('Cerrar sesión de la aplicación'),
+                        onPressed: busy
+                            ? null
+                            : () => _confirmSignOut(context, controller!),
+                        child: const Text('Cerrar sesión en este equipo'),
                       ),
                     ],
                   ],
@@ -93,6 +119,110 @@ class OperatorAccessCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _confirmSignOut(
+    BuildContext context,
+    OperatorSession controller,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cerrar sesión en este equipo'),
+        content: const Text(
+          'Esta acción cerrará tu sesión solo en este dispositivo. '
+          'No afectará tu sesión en otros dispositivos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await controller.signOut();
+  }
+}
+
+class _AccessInfoRow extends StatelessWidget {
+  const _AccessInfoRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 5,
+          child: Text(
+            label,
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? AppTheme.textDark,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.label,
+    required this.connected,
+    required this.checking,
+  });
+
+  final String label;
+  final bool connected;
+  final bool checking;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = checking
+        ? AppTheme.navyBlue
+        : connected
+        ? AppTheme.successGreen
+        : AppTheme.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }

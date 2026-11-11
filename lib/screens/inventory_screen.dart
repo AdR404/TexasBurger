@@ -14,6 +14,7 @@ import '../widgets/inventory_lot_detail_sheet.dart';
 import '../data/inventory_demo_data.dart';
 import '../widgets/inventory_expiry_badge.dart';
 import '../widgets/inventory_movements_sheet.dart';
+import '../config/build_flags.dart';
 
 class InventoryScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -44,6 +45,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   bool _loading = false;
   bool _working = false;
   int _revision = 0;
+  bool get _isDemoMode => BuildFlags.demoDataEnabled && _demoMode;
 
   @override
   void initState() {
@@ -69,13 +71,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final branch = CajaService().saleContext?.branchId;
     if (_branch == branch) return;
     _branch = branch;
-    if (!_demoMode) _load();
+    if (!_isDemoMode) _load();
   }
 
   void _sessionChanged() {
     if (_actor == _repository.operatorId) return;
     _actor = _repository.operatorId;
-    if (!_demoMode) _load();
+    if (!_isDemoMode) _load();
   }
 
   Future<bool> _load() async {
@@ -86,7 +88,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _error = null;
       _loading = false;
     });
-    if (_demoMode) return false;
+    if (_isDemoMode) return false;
     if (_repository.operatorId == null) {
       setState(
         () => _error =
@@ -125,7 +127,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _addLot() async {
     if (_working || _loading || !UserRoleService().isAdmin) return;
-    final demo = _demoMode;
+    final demo = _isDemoMode;
     final actor = _repository.operatorId;
     final branch = _branch;
     final ingredients = _data?.ingredients;
@@ -179,7 +181,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _movements() async {
     if (_working || _loading || !UserRoleService().isAdmin) return;
-    final demo = _demoMode;
+    final demo = _isDemoMode;
     final actor = _repository.operatorId;
     final branch = _branch;
     if (!demo && (_data == null || actor == null)) return;
@@ -237,10 +239,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     final search = _search.trim().toLowerCase();
 
-    final displayedLots = _demoMode
+    final displayedLots = _isDemoMode
         ? InventoryDemoData.create()
         : (_data?.lots ?? const <InventoryLot>[]);
-    final ingredientNames = _demoMode
+    final ingredientNames = _isDemoMode
         ? IngredientCatalog.defaultIngredients
         : (_data?.ingredients.map((i) => i.name).toList() ?? <String>[]);
 
@@ -398,32 +400,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
             if (_data != null && _data!.lots.isEmpty)
               const Text('No hay lotes registrados en esta sucursal.'),
           ],
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text(
-              'Mostrar datos simulados',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.navyBlue,
+          if (BuildFlags.demoDataEnabled)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Mostrar datos simulados',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.navyBlue,
+                ),
               ),
+              subtitle: const Text(
+                'Solo para probar la interfaz. '
+                'No se guardan en Supabase.',
+              ),
+              value: _isDemoMode,
+              onChanged: _working
+                  ? null
+                  : (enabled) {
+                      if (!BuildFlags.demoDataEnabled) return;
+                      setState(() {
+                        _demoMode = enabled;
+                        _revision++;
+                        _loading = false;
+                        _data = null;
+                      });
+                      if (!enabled) _load();
+                    },
             ),
-            subtitle: const Text(
-              'Solo para probar la interfaz. '
-              'No se guardan en Supabase.',
-            ),
-            value: _demoMode,
-            onChanged: _working
-                ? null
-                : (enabled) {
-                    setState(() {
-                      _demoMode = enabled;
-                      _revision++;
-                      _loading = false;
-                      _data = null;
-                    });
-                    if (!enabled) _load();
-                  },
-          ),
 
           const SizedBox(height: 12),
 
@@ -441,7 +445,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _working || _loading || (!_demoMode && _data == null)
+              onPressed: _working || _loading || (!_isDemoMode && _data == null)
                   ? null
                   : _addLot,
               child: const Text('Agregar lote'),
@@ -453,7 +457,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: _working || _loading || (!_demoMode && _data == null)
+              onPressed: _working || _loading || (!_isDemoMode && _data == null)
                   ? null
                   : _movements,
               child: const Text('Movimientos de inventario'),
@@ -559,7 +563,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             Text(
                               '${ingredientLots.length} lote(s) '
                               '· $locations\n'
-                              '${_demoMode ? 'Existencia simulada' : 'Existencia registrada'}: '
+                              '${_isDemoMode ? 'Existencia simulada' : 'Existencia registrada'}: '
                               '${inventoryAvailableText(ingredientLots)}',
                               style: const TextStyle(
                                 color: AppTheme.textMuted,
@@ -595,7 +599,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       builder: (_) => InventoryLotDetailSheet(
                         ingredientName: ingredient,
                         lots: ingredientLots,
-                        isDemo: _demoMode,
+                        isDemo: _isDemoMode,
                       ),
                     );
                   },

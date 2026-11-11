@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:texas_burger/config/build_flags.dart';
 import 'package:texas_burger/data/staff_catalog.dart';
 import 'package:texas_burger/models/corte_caja.dart';
 import 'package:texas_burger/models/producto.dart';
@@ -53,10 +54,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    BuildFlags.setDemoDataEnabledForTesting(true);
     SharedPreferences.setMockInitialValues({});
     clearTestSession();
   });
-  tearDown(clearTestSession);
+  tearDown(() {
+    clearTestSession();
+    BuildFlags.resetDemoDataForTesting();
+  });
 
   test(
     'catalog IDs are stable and demo staff have no numeric user mapping',
@@ -73,6 +78,16 @@ void main() {
       );
     },
   );
+
+  test('demo staff catalog is unavailable when the build flag is off', () {
+    BuildFlags.resetDemoDataForTesting();
+    expect(BuildFlags.demoDataEnabled, isFalse);
+    expect(StaffCatalog.employees, isEmpty);
+    expect(
+      () => StaffCatalog.selection('norte', 'demo_sofia_reyes'),
+      throwsArgumentError,
+    );
+  });
 
   test(
     'legacy JSON keeps all old fields and does not invent branch or employee',

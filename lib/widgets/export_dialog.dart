@@ -86,7 +86,7 @@ class ExportDialog extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.copy, size: 18),
-                    label: const Text('Copiar WhatsApp'),
+                    label: const Text('Copiar'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -109,21 +109,32 @@ class ExportDialog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () async {
-                      final csvData = ExportService.generateSalesCsv(sales);
-                      final path = await ExportService.saveCsvToDesktop(csvData, prefix: 'reporte');
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              path != null
-                                  ? '¡Archivo CSV guardado en el escritorio!\n$path'
-                                  : 'No se pudo guardar el archivo.',
-                            ),
-                            duration: const Duration(seconds: 4),
-                          ),
+                      String? path;
+                      Object? saveError;
+                      try {
+                        final csvData = ExportService.generateSalesCsv(sales);
+                        path = await ExportService.saveCsv(
+                          csvData,
+                          prefix: 'reporte',
                         );
+                      } catch (error) {
+                        saveError = error;
                       }
+
+                      if (!context.mounted) return;
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            saveError != null
+                                ? 'No se pudo guardar el archivo: $saveError'
+                                : path != null
+                                ? '¡Archivo CSV guardado!\n$path'
+                                : 'Guardado cancelado.',
+                          ),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
                     },
                   ),
                 ),

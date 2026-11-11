@@ -1,4 +1,6 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:file_saver/file_saver.dart';
 import 'package:intl/intl.dart';
 import '../models/venta.dart';
 import '../models/corte_caja.dart';
@@ -65,21 +67,20 @@ class ExportService {
     return buffer.toString();
   }
 
-  static Future<String?> saveCsvToDesktop(String csvContent, {String prefix = 'ventas'}) async {
-    try {
-      final nowStr = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final filename = 'texas_burger_${prefix}_$nowStr.csv';
-      
-      // Target Desktop directory
-      final userProfile = Platform.environment['USERPROFILE'] ?? 'C:\\Users\\andyr';
-      final desktopDir = Directory('$userProfile\\Desktop');
-      
-      final file = File('${desktopDir.path}\\$filename');
-      await file.writeAsString(csvContent);
-      return file.path;
-    } catch (e) {
-      return null;
-    }
+  static Future<String?> saveCsv(
+    String csvContent, {
+    String prefix = 'ventas',
+  }) {
+    final nowStr = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final filename = 'texas_burger_${prefix}_$nowStr';
+
+    return FileSaver.instance.saveAs(
+      name: filename,
+      bytes: Uint8List.fromList(utf8.encode(csvContent)),
+      fileExtension: 'csv',
+      mimeType: MimeType.csv,
+      dialogTitle: 'Guardar reporte CSV',
+    );
   }
 
   static String generateWhatsAppCorteReport(CorteCaja corte) {
@@ -119,7 +120,7 @@ class ExportService {
         buffer.writeln('🔴 *FALTANTE:* -\$${diff.abs().toStringAsFixed(2)}');
       }
     }
-    
+
     buffer.writeln('----------------------------------');
     buffer.writeln('💳 *Tarjeta:* \$${corte.cardSales.toStringAsFixed(2)}');
     buffer.writeln('📱 *Transferencia:* \$${corte.transferSales.toStringAsFixed(2)}');

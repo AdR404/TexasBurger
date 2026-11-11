@@ -9,8 +9,8 @@ class BuildFlags {
   static bool? _demoDataEnabledForTesting;
 
   static bool get demoDataEnabled =>
-      demoDataEnabledByBuild ||
-      (kDebugMode && _demoDataEnabledForTesting == true);
+      kDebugMode &&
+      (demoDataEnabledByBuild || _demoDataEnabledForTesting == true);
 
   @visibleForTesting
   static void setDemoDataEnabledForTesting(bool enabled) {

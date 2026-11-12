@@ -8,6 +8,7 @@ import '../models/sale_context.dart';
 import 'db_service.dart';
 import 'app_auth_service.dart';
 import 'user_role_service.dart';
+import 'inventory_sale_attempt.dart';
 
 class SalesService extends ChangeNotifier {
   static final SalesService _instance = SalesService._internal();
@@ -23,6 +24,39 @@ class SalesService extends ChangeNotifier {
 
   final Future<void> Function(Venta) _remoteWriter;
   final bool _testLocal;
+  @visibleForTesting
+  InventorySaleAttempt? inventoryAttemptForTesting;
+  @visibleForTesting
+  Future<Map<String, dynamic>> Function(Venta)? inventoryRequestForTesting;
+  bool get _inventoryMode =>
+      inventoryAttemptForTesting != null || DbService.inventorySalesEnabled;
+
+  Future<Venta> _finishInventory(InventorySaleAttempt attempt) async {
+    final sale = await attempt.resume();
+    DbService.lastSyncStatusNotifier.value =
+        'Venta #${sale.remoteId} confirmada en Supabase con inventario';
+    final existing = _sales
+        .where((s) => s.operationId == sale.operationId)
+        .toList();
+    if (existing.isEmpty) _sales.insert(0, sale);
+    if (sale.ticketNumber > _lastTicketNumber) {
+      _lastTicketNumber = sale.ticketNumber;
+    }
+    await _save(); // Keep pending confirmation until history is durable.
+    await attempt.acknowledge(sale.operationId!);
+    notifyListeners();
+    return existing.isEmpty ? sale : existing.first;
+  }
+
+  Future<Venta> recoverInventorySale() => _serialize(() async {
+    if (!_inventoryMode) {
+      throw StateError('El modo de inventario está desactivado.');
+    }
+    await init();
+    return _finishInventory(
+      inventoryAttemptForTesting ?? DbService.inventoryAttempt(),
+    );
+  });
 
   List<Venta> _sales = [];
   int _lastTicketNumber = 1000;
@@ -103,6 +137,7 @@ class SalesService extends ChangeNotifier {
     String? customerPhone,
     String? deliveryAddress,
   }) => _serialize(() async {
+    if (_inventoryMode) await init();
     if (!_testLocal) {
       final auth = AppAuthService();
       final user = auth.currentUser;
@@ -150,6 +185,20 @@ class SalesService extends ChangeNotifier {
       deliveryAddress: deliveryAddress,
     );
 
+    if (_inventoryMode) {
+      final attempt =
+          inventoryAttemptForTesting ?? DbService.inventoryAttempt();
+      if (await attempt.pending() != null) {
+        throw StateError(
+          'Hay un cobro pendiente. Utiliza Recuperar cobro pendiente; no se enviará otra venta.',
+        );
+      }
+      final request =
+          await (inventoryRequestForTesting ??
+              DbService.prepareInventoryRequest)(newSale);
+      await attempt.prepare(newSale, request);
+      return _finishInventory(attempt);
+    }
     await _remoteWriter(newSale);
     _lastTicketNumber = newSale.ticketNumber;
     _sales.insert(0, newSale);
@@ -169,12 +218,44 @@ class SalesService extends ChangeNotifier {
     return newSale;
   });
 
+  // No local deletion can substitute a server cancellation.
   Future<void> cancelSale(String id) async {
     UserRoleService().requireAdmin();
-    _sales.removeWhere((s) => s.id == id);
-    await _save();
-    notifyListeners();
+    throw StateError(
+      'Cancela desde el historial remoto; no se eliminan tickets locales.',
+    );
   }
+
+  Future<void> applyRemoteStates(
+    List<Map<String, dynamic>> rows,
+  ) => _serialize(() async {
+    await init();
+    bool changed = false;
+    _sales = _sales.map((sale) {
+      final matches = rows.where(
+        (r) =>
+            (sale.remoteId != null && r['id'] == sale.remoteId) ||
+            (sale.operationId != null && r['operacion_id'] == sale.operationId),
+      );
+      if (matches.length != 1) return sale; // Never match on amount/date/name.
+      final r = matches.single;
+      final json = sale.toJson();
+      final updates = <String, dynamic>{
+        'status': r['estado'],
+        'cancellationReason': r['cancelacion_motivo'],
+        'cancelledAt': r['cancelada_en'],
+        'cancelledBy': r['cancelada_por'],
+        'inventoryReturned': r['inventario_reintegrado'] == true,
+      };
+      if (updates.entries.every((e) => json[e.key] == e.value)) return sale;
+      changed = true;
+      return Venta.fromJson({...json, ...updates});
+    }).toList();
+    if (changed) {
+      await _save();
+      notifyListeners();
+    }
+  });
 
   Future<void> clearAllSales() async {
     UserRoleService().requireAdmin();

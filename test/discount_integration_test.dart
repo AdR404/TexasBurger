@@ -269,7 +269,7 @@ void main() {
         ),
       );
       expect(csv, contains('"A,""B",14.40,16.00,Si,90.00'));
-      expect(csv.split('\n')[2], endsWith(',"",,,,'));
+      expect(csv.split('\n')[2], contains(',"",,,,,activa,'));
     },
   );
 

@@ -1,0 +1,2 @@
+[functions.admin-register-user]
+verify_jwt = true

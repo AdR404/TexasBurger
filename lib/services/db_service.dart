@@ -6,11 +6,158 @@ import 'operator_auth_service.dart';
 import 'supabase_environment.dart';
 import 'operator_session.dart';
 import 'app_auth_service.dart';
+import 'product_service.dart';
+import 'inventory_sale_attempt.dart';
+import '../models/producto.dart';
+import 'sale_actions.dart';
 
 const supabaseUrl = 'https://zlljyvowdripxdgvhilz.supabase.co';
 const supabaseKey = 'sb_publishable_QagT6TuxktFz4DgItZ6aEQ_jRv0DbUO';
 
 class DbService {
+  static const inventorySalesEnabled = bool.fromEnvironment(
+    'TEXAS_ENABLE_INVENTORY_SALES',
+    defaultValue: false,
+  );
+
+  static InventorySaleAttempt inventoryAttempt() {
+    if (!onlineSalesEnabled || !isSyncEnabled) {
+      throw StateError(
+        'El modo inventario requiere ventas remotas y sincronización habilitadas. No se usará el registro antiguo.',
+      );
+    }
+    final actor = _db.auth.currentUser?.id;
+    final project = environment?.projectId;
+    if (actor == null || project == null) {
+      throw StateError(
+        'Inicia sesión y comprueba la configuración de Supabase.',
+      );
+    }
+    return InventorySaleAttempt(
+      project: project,
+      actor: actor,
+      send: (id, request) async {
+        if (_db.auth.currentUser?.id != actor) {
+          throw StateError('La sesión cambió.');
+        }
+        return await _db
+            .rpc(
+              'registrar_venta_con_consumo',
+              params: {'p_operacion_id': id, 'p_solicitud': request},
+            )
+            .retry(enabled: false);
+      },
+    );
+  }
+
+  static Future<Map<String, dynamic>> inventoryRequest(
+    Venta sale, {
+    required Future<int> Function(Producto) resolve,
+  }) async {
+    if (sale.items.isEmpty ||
+        sale.saleContext == null ||
+        sale.saleContext!.branchId.isEmpty ||
+        sale.iva == null ||
+        sale.ivaRate != 0.16 ||
+        sale.ivaIncluded != true ||
+        ![
+          sale.subtotal,
+          sale.discount,
+          sale.total,
+          sale.iva!,
+        ].every((v) => v.isFinite && v >= 0) ||
+        !const [
+          'Efectivo',
+          'Tarjeta',
+          'Transferencia',
+        ].contains(sale.paymentMethod)) {
+      throw StateError(
+        'Faltan datos válidos del cobro, sucursal o IVA incluido.',
+      );
+    }
+    if (sale.notes.isNotEmpty ||
+        sale.items.any(
+          (i) =>
+              i.selectedExtras.isNotEmpty ||
+              i.removedIngredients.isNotEmpty ||
+              i.notes.isNotEmpty,
+        )) {
+      throw StateError(
+        'Esta venta tiene extras, exclusiones o notas todavía incompatibles con el descuento automático. No se registró.',
+      );
+    }
+    final items = <Map<String, dynamic>>[];
+    for (final item in sale.items) {
+      if (item.quantity <= 0 ||
+          !item.unitPrice.isFinite ||
+          item.unitPrice < 0) {
+        throw StateError('Cantidad o precio inválido.');
+      }
+      final id = await resolve(item.product);
+      if (id <= 0) throw StateError('Producto sin ID remoto válido.');
+      items.add({
+        'producto_id': id,
+        'cantidad': item.quantity,
+        'precio_unitario': item.unitPrice,
+        'extras': <dynamic>[],
+        'exclusiones': <dynamic>[],
+        'notas': '',
+      });
+    }
+    return {
+      'sucursal_id': sale.saleContext!.branchId,
+      'items': items,
+      'subtotal': sale.subtotal,
+      'descuento': sale.discount,
+      'total': sale.total,
+      'iva': sale.iva,
+      'metodo_pago': sale.paymentMethod,
+      if (sale.discountCode != null) 'codigo_descuento': sale.discountCode,
+    };
+  }
+
+  static Future<Map<String, dynamic>> prepareInventoryRequest(
+    Venta sale,
+  ) async {
+    final actor = _db.auth.currentUser;
+    if (actor == null) throw StateError('Inicia sesión.');
+    final rows = await _db.rpc('login_mi_perfil').retry(enabled: false);
+    if (rows is! List || rows.length != 1) {
+      throw StateError('Perfil no autorizado.');
+    }
+    final profile = AuthUser.fromProfile(
+      actor.id,
+      actor.email ?? '',
+      Map<String, dynamic>.from(rows.single as Map),
+    );
+    if (profile.employeeId != sale.saleContext?.employeeId ||
+        (profile.branchId != null &&
+            profile.branchId != sale.saleContext?.branchId)) {
+      throw StateError('La sucursal o empleado no corresponde a la sesión.');
+    }
+    final project = environment;
+    if (project == null) throw StateError('Falta configuración del proyecto.');
+    final request = await inventoryRequest(
+      sale,
+      resolve: (product) => ProductService().resolveRemoteId(
+        product: product,
+        projectId: project.projectId,
+        lookup: (id, name) async {
+          final query = _db.from('productos').select('id,nombre,activo');
+          return await (id == null
+                  ? query.eq('nombre', name)
+                  : query.eq('id', id))
+              .limit(2)
+              .retry(enabled: false);
+        },
+      ),
+    );
+    if (_db.auth.currentUser?.id != actor.id) {
+      throw StateError('La sesión cambió.');
+    }
+    return request;
+  }
+
   static const String _syncPrefKey = 'texas_db_sync_enabled';
 
   static bool _initializedSupabase = false;
@@ -50,6 +197,8 @@ class DbService {
           'id,fecha_hora,total,metodo_pago,empresa_id,empresa_nombre,'
           'sucursal_id,sucursal_nombre,empleado_pos_id,empleado_nombre,'
           'subtotal,descuento,codigo_descuento,iva,tasa_iva,iva_incluido,'
+          'operacion_id,caja_turno_id,estado,cancelacion_motivo,cancelada_en,cancelada_por,inventario_reintegrado,'
+          '${SaleActions.verifiedCashEnabled ? 'efectivo_cancelacion_estado,efectivo_conciliado_por,efectivo_conciliado_en,efectivo_conciliacion_nota,' : ''}'
           'detalle_venta(id,producto_id,cantidad,precio_unitario,productos(nombre))',
         )
         .eq('empresa_id', 'texas_burger');
@@ -58,8 +207,8 @@ class DbService {
       final start = DateTime(date.year, date.month, date.day);
       final end = DateTime(date.year, date.month, date.day + 1);
       query = query
-          .gte('fecha_hora', start.toUtc().toIso8601String())
-          .lt('fecha_hora', end.toUtc().toIso8601String());
+          .gte('fecha_hora', start.toIso8601String())
+          .lt('fecha_hora', end.toIso8601String());
     }
     return await query
         .order('fecha_hora', ascending: false, nullsFirst: false)
@@ -134,6 +283,11 @@ class DbService {
     SupabaseClient? client,
     bool? enabled,
   }) async {
+    if (inventorySalesEnabled) {
+      throw StateError(
+        'El modo inventario requiere la RPC; el registro antiguo está bloqueado.',
+      );
+    }
     if (!(enabled ?? onlineSalesEnabled) || !isSyncEnabled) {
       lastSyncStatusNotifier.value =
           'Ticket #${venta.ticketNumber} guardado solo en dispositivo; sin confirmación remota';
@@ -156,7 +310,9 @@ class DbService {
         throw StateError('Inicia sesión antes de registrar la venta.');
       }
       final rows = await db.rpc('login_mi_perfil').retry(enabled: false);
-      if (rows is! List || rows.length != 1 || db.auth.currentUser?.id != actor) {
+      if (rows is! List ||
+          rows.length != 1 ||
+          db.auth.currentUser?.id != actor) {
         throw StateError('Se requiere un perfil autenticado valido.');
       }
       final profile = AuthUser.fromProfile(
@@ -172,23 +328,31 @@ class DbService {
       final userId = profile.businessId;
       final details = <Map<String, dynamic>>[];
       for (final item in venta.items) {
-        final products = await db
-            .from('productos')
-            .select('id')
-            .eq('nombre', item.product.name)
-            .eq('activo', true)
-            .retry(enabled: false);
-        if (products.length != 1 ||
-            products.single['id'] is! int ||
-            item.quantity <= 0 ||
+        if (item.quantity <= 0 ||
             !item.unitPrice.isFinite ||
             item.unitPrice < 0) {
           throw StateError(
             'Producto sin correspondencia única válida: ${item.product.name}',
           );
         }
+        final project = environment;
+        if (project == null) {
+          throw StateError('No se pudo identificar el proyecto Supabase.');
+        }
+        final productId = await ProductService().resolveRemoteId(
+          product: item.product,
+          projectId: project.projectId,
+          lookup: (id, name) async {
+            final query = db.from('productos').select('id,nombre,activo');
+            return await (id == null
+                    ? query.eq('nombre', name)
+                    : query.eq('id', id))
+                .limit(2)
+                .retry(enabled: false);
+          },
+        );
         details.add({
-          'producto_id': products.single['id'],
+          'producto_id': productId,
           'cantidad': item.quantity,
           'precio_unitario': item.unitPrice,
         });

@@ -26,6 +26,8 @@ class CajaService extends ChangeNotifier {
   final CajaRepository _remote = CajaRepository();
   CajaSnapshot? _snapshot;
   String? _snapshotActor;
+  Map<String, dynamic>? get verifiedSummary =>
+      _validSnapshot ? _snapshot?.summary : null;
   String? remoteError;
   bool remoteBusy = false;
   int _remoteRevision = 0;
@@ -99,7 +101,8 @@ class CajaService extends ChangeNotifier {
       }
       _snapshot = snapshot;
       _snapshotActor = actor;
-    } catch (e) {
+    } catch (e, stack) {
+      CajaRepository.debugFailure('refreshRemote', e, stack);
       if (revision == _remoteRevision) remoteError = _remoteMessage(e);
     } finally {
       remoteBusy = false;
@@ -120,7 +123,8 @@ class CajaService extends ChangeNotifier {
     notifyListeners();
     try {
       return await operation();
-    } catch (e) {
+    } catch (e, stack) {
+      CajaRepository.debugFailure('remoteOperation', e, stack);
       _snapshot = null;
       remoteError = _remoteMessage(e);
       throw StateError(remoteError!);
@@ -141,7 +145,8 @@ class CajaService extends ChangeNotifier {
       }
       _snapshot = snapshot;
       _snapshotActor = actor;
-    } catch (_) {
+    } catch (e, stack) {
+      CajaRepository.debugFailure('reloadConfirmed', e, stack);
       throw StateError(
         'La operación fue confirmada por Supabase, pero no se pudo actualizar Caja. No repitas la operación; pulsa Actualizar.',
       );
@@ -239,7 +244,9 @@ class CajaService extends ChangeNotifier {
 
   Future<void> updateSaleContext(SaleContext selection) async {
     if (remoteBusy) {
-      throw StateError('Espera a que termine la operación de Caja antes de cambiar la sucursal.');
+      throw StateError(
+        'Espera a que termine la operación de Caja antes de cambiar la sucursal.',
+      );
     }
     if (!_testLocal) {
       final auth = AppAuthService();
@@ -269,11 +276,14 @@ class CajaService extends ChangeNotifier {
     if (!_testLocal) {
       final auth = AppAuthService();
       final user = auth.currentUser;
-      if (user == null || saleContext.employeeId != user.employeeId ||
+      if (user == null ||
+          saleContext.employeeId != user.employeeId ||
           saleContext.employeeName != user.employeeName ||
           auth.branches[saleContext.branchId] != saleContext.branchName ||
           _saleContext?.branchId != saleContext.branchId) {
-        throw StateError('Cambió el empleado o la sucursal. Abre nuevamente el formulario de Caja.');
+        throw StateError(
+          'Cambió el empleado o la sucursal. Abre nuevamente el formulario de Caja.',
+        );
       }
     }
     if (remoteMode) {
@@ -392,7 +402,9 @@ class CajaService extends ChangeNotifier {
 
     // Filter sales since caja was opened
     final shiftSales = allSales
-        .where((s) => s.timestamp.isAfter(_activeCorte!.openedAt))
+        .where(
+          (s) => !s.isCancelled && s.timestamp.isAfter(_activeCorte!.openedAt),
+        )
         .toList();
 
     double cashSales = 0.0;
@@ -440,6 +452,7 @@ class CajaService extends ChangeNotifier {
     required double actualCashCounted,
     required String notes,
     required List<Venta> allSales,
+    String? fingerprint,
   }) async {
     UserRoleService().requireAdmin();
     if (remoteMode) {
@@ -448,7 +461,12 @@ class CajaService extends ChangeNotifier {
         throw StateError('Actualiza Caja antes de cerrar el turno.');
       }
       return _remoteOperation(() async {
-        final id = await _remote.close(turn, actualCashCounted, notes);
+        final id = await _remote.close(
+          turn,
+          actualCashCounted,
+          notes,
+          fingerprint: fingerprint,
+        );
         CorteCaja closed;
         try {
           closed = await _remote.closed(id, turn.openingContext!.branchId);

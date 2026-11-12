@@ -11,6 +11,8 @@ import '../widgets/admin_access.dart';
 import '../services/user_role_service.dart';
 import '../services/db_service.dart';
 import '../services/operator_session.dart';
+import '../services/sale_actions.dart';
+import '../widgets/verified_cash_dialog.dart';
 
 class CajaScreen extends StatefulWidget {
   const CajaScreen({super.key, this.active = true});
@@ -251,7 +253,52 @@ class _CajaScreenState extends State<CajaScreen> {
     );
   }
 
-  void _showCierreCajaDialog(CorteCaja live) {
+  Future<void> _showCierreCajaDialog(CorteCaja live) async {
+    if (_cajaService.remoteMode && SaleActions.verifiedCashEnabled) {
+      CorteCaja? closed;
+      final branch = _cajaService.saleContext?.branchId;
+      final actor = DbService.session?.validOperatorId;
+      void sameContext() {
+        if (!_cajaService.remoteMode ||
+            _cajaService.saleContext?.branchId != branch ||
+            DbService.session?.validOperatorId != actor) {
+          throw StateError('Cambió la sesión o sucursal.');
+        }
+      }
+
+      await showAdminDialog(
+        context: context,
+        builder: (ctx) => VerifiedCashDialog(
+          load: () async {
+            sameContext();
+            await _cajaService.refreshRemote();
+            sameContext();
+            final summary = _cajaService.verifiedSummary;
+            if (summary == null || summary['turno_id'].toString() != live.id) {
+              throw StateError(
+                _cajaService.remoteError ??
+                    'El turno ya se cerró o cambió. Actualiza Caja.',
+              );
+            }
+            return summary;
+          },
+          close: (fingerprint, counted, notes) async {
+            sameContext();
+            if (_cajaService.activeCorte?.id != live.id) {
+              throw StateError('Cambió el turno.');
+            }
+            closed = await _cajaService.cerrarCaja(
+              actualCashCounted: counted,
+              notes: notes,
+              allSales: _salesService.sales,
+              fingerprint: fingerprint,
+            );
+          },
+        ),
+      );
+      if (mounted && closed != null) _showCorteResultDialog(closed!);
+      return;
+    }
     final remoteMode = _cajaService.remoteMode;
     final countedController = TextEditingController(text: live.expectedCash.toStringAsFixed(2));
     final notesController = TextEditingController();
@@ -475,6 +522,8 @@ class _CajaScreenState extends State<CajaScreen> {
             if (_cajaService.remoteMode) ...[
               const Text('Caja remota · America/Monterrey (UTC−6). Antes de cerrar, detengan los cobros de esta sucursal en todos los dispositivos.'),
               TextButton.icon(onPressed: _cajaService.refreshRemote, icon: const Icon(Icons.refresh), label: const Text('Actualizar Caja')),
+              if (SaleActions.verifiedCashEnabled && _cajaService.verifiedSummary != null)
+                CashSummaryView(summary: _cajaService.verifiedSummary!),
               const Text('Cortes: últimos 50 de esta sucursal. Ventas del turno: consulta completa al actualizar y al cerrar.'),
             ],
             if (!_cajaService.remoteMode)

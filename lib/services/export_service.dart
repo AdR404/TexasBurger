@@ -15,7 +15,7 @@ class ExportService {
     // UTF-8 BOM so Excel opens accented Spanish characters correctly
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas,Empresa_ID,Empresa,Sucursal_ID,Sucursal,Empleado_ID,Atendido_Por,Codigo_Descuento,IVA,Tasa_IVA,IVA_Incluido,Base_Sin_IVA',
+      'Ticket,Fecha,Hora,Modalidad,Detalle_Modalidad,Productos,Metodo_Pago,Subtotal,Descuento,Total,Notas,Empresa_ID,Empresa,Sucursal_ID,Sucursal,Empleado_ID,Atendido_Por,Codigo_Descuento,IVA,Tasa_IVA,IVA_Incluido,Base_Sin_IVA,Estado,Ingreso_Valido,Motivo_Cancelacion',
     );
 
     for (final sale in sales) {
@@ -30,11 +30,15 @@ class ExportService {
       } else if (sale.orderType == 'Para llevar') {
         detalleModalidad = sale.customerName ?? 'Mostrador';
       } else if (sale.orderType == 'A domicilio') {
-        detalleModalidad = '${sale.customerName ?? ''} - ${sale.customerPhone ?? ''} - ${sale.deliveryAddress ?? ''}';
+        detalleModalidad =
+            '${sale.customerName ?? ''} - ${sale.customerPhone ?? ''} - ${sale.deliveryAddress ?? ''}';
       }
 
       final productosStr = sale.items
-          .map((i) => '${i.quantity}x ${i.product.displayName}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}')
+          .map(
+            (i) =>
+                '${i.quantity}x ${i.product.displayName}${i.customizationSummary.isNotEmpty ? " (${i.customizationSummary})" : ""}',
+          )
           .join(' + ')
           .replaceAll('"', '""');
 
@@ -60,7 +64,7 @@ class ExportService {
       ].map((value) => '"${value.replaceAll('"', '""')}"').join(',');
 
       buffer.writeln(
-        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas",$staffColumns,$taxColumns',
+        '"$ticket","$fecha","$hora","$modalidad","${detalleModalidad.replaceAll('"', '""')}","$productosStr","$metodo",$subtotal,$descuento,$total,"$notas",$staffColumns,$taxColumns,${sale.status},${sale.isCancelled ? '0.00' : total},"${(sale.cancellationReason ?? '').replaceAll('"', '""')}"',
       );
     }
 
@@ -86,31 +90,51 @@ class ExportService {
   static String generateWhatsAppCorteReport(CorteCaja corte) {
     final dtFormat = DateFormat('dd/MM/yyyy hh:mm a');
     final openedStr = dtFormat.format(corte.openedAt);
-    final closedStr = corte.closedAt != null ? dtFormat.format(corte.closedAt!) : 'Turno en curso';
+    final closedStr = corte.closedAt != null
+        ? dtFormat.format(corte.closedAt!)
+        : 'Turno en curso';
 
     final buffer = StringBuffer();
     buffer.writeln('🍔 *TEXAS BURGER - CORTE DE CAJA* 🍔');
-    buffer.writeln('Empresa: ${corte.openingContext?.companyName ?? SaleContext.texasBurgerName}');
-    buffer.writeln('Sucursal: ${corte.openingContext?.branchName ?? SaleContext.notRecorded}');
-    buffer.writeln('Abrió caja: ${corte.openingContext?.employeeName ?? SaleContext.notRecorded}');
+    buffer.writeln(
+      'Empresa: ${corte.openingContext?.companyName ?? SaleContext.texasBurgerName}',
+    );
+    buffer.writeln(
+      'Sucursal: ${corte.openingContext?.branchName ?? SaleContext.notRecorded}',
+    );
+    buffer.writeln(
+      'Abrió caja: ${corte.openingContext?.employeeName ?? SaleContext.notRecorded}',
+    );
     buffer.writeln('----------------------------------');
     buffer.writeln('📅 *Apertura:* $openedStr');
     buffer.writeln('🏁 *Cierre:* $closedStr');
     buffer.writeln('🧾 *Órdenes cobradas:* ${corte.ordersCount}');
     buffer.writeln('----------------------------------');
-    buffer.writeln('💼 *Fondo inicial:* \$${corte.initialCash.toStringAsFixed(2)}');
-    buffer.writeln('➕ *Ventas en efectivo:* \$${corte.cashSales.toStringAsFixed(2)}');
+    buffer.writeln(
+      '💼 *Fondo inicial:* \$${corte.initialCash.toStringAsFixed(2)}',
+    );
+    buffer.writeln(
+      '➕ *Ventas en efectivo:* \$${corte.cashSales.toStringAsFixed(2)}',
+    );
     if (corte.cashIn > 0) {
-      buffer.writeln('➕ *Entradas a caja:* \$${corte.cashIn.toStringAsFixed(2)}');
+      buffer.writeln(
+        '➕ *Entradas a caja:* \$${corte.cashIn.toStringAsFixed(2)}',
+      );
     }
     if (corte.cashOut > 0) {
-      buffer.writeln('➖ *Gastos/Salidas:* \$${corte.cashOut.toStringAsFixed(2)}');
+      buffer.writeln(
+        '➖ *Gastos/Salidas:* \$${corte.cashOut.toStringAsFixed(2)}',
+      );
     }
     buffer.writeln('----------------------------------');
-    buffer.writeln('💰 *EFECTIVO ESPERADO:* \$${corte.expectedCash.toStringAsFixed(2)}');
-    
+    buffer.writeln(
+      '💰 *EFECTIVO ESPERADO:* \$${corte.expectedCash.toStringAsFixed(2)}',
+    );
+
     if (corte.actualCashCounted != null) {
-      buffer.writeln('💵 *EFECTIVO CONTADO:* \$${corte.actualCashCounted!.toStringAsFixed(2)}');
+      buffer.writeln(
+        '💵 *EFECTIVO CONTADO:* \$${corte.actualCashCounted!.toStringAsFixed(2)}',
+      );
       final diff = corte.difference ?? 0.0;
       if (diff == 0) {
         buffer.writeln('✅ *Diferencia:* \$0.00 (caja cuadrada)');
@@ -123,7 +147,9 @@ class ExportService {
 
     buffer.writeln('----------------------------------');
     buffer.writeln('💳 *Tarjeta:* \$${corte.cardSales.toStringAsFixed(2)}');
-    buffer.writeln('📱 *Transferencia:* \$${corte.transferSales.toStringAsFixed(2)}');
+    buffer.writeln(
+      '📱 *Transferencia:* \$${corte.transferSales.toStringAsFixed(2)}',
+    );
     buffer.writeln('⭐ *VENTA TOTAL:* \$${corte.totalSales.toStringAsFixed(2)}');
 
     if (corte.movimientos.isNotEmpty) {
@@ -131,7 +157,9 @@ class ExportService {
       buffer.writeln('📋 *Movimientos de caja:*');
       for (final m in corte.movimientos) {
         final symbol = m.type == 'entrada' ? '➕' : '➖';
-        buffer.writeln('$symbol \$${m.amount.toStringAsFixed(2)} - ${m.concept}');
+        buffer.writeln(
+          '$symbol \$${m.amount.toStringAsFixed(2)} - ${m.concept}',
+        );
       }
     }
 
@@ -143,17 +171,33 @@ class ExportService {
     return buffer.toString();
   }
 
-  static String generateWhatsAppSalesReport(List<Venta> sales, String periodName) {
+  static String generateWhatsAppSalesReport(
+    List<Venta> sales,
+    String periodName,
+  ) {
     final dateFormat = DateFormat('dd/MM/yyyy');
+    final all = sales;
+    sales = sales.where((s) => !s.isCancelled).toList();
     final total = sales.fold<double>(0.0, (sum, s) => sum + s.total);
-    final cash = sales.where((s) => s.paymentMethod == 'Efectivo').fold<double>(0.0, (sum, s) => sum + s.total);
-    final card = sales.where((s) => s.paymentMethod == 'Tarjeta').fold<double>(0.0, (sum, s) => sum + s.total);
-    final transfer = sales.where((s) => s.paymentMethod == 'Transferencia').fold<double>(0.0, (sum, s) => sum + s.total);
+    final cash = sales
+        .where((s) => s.paymentMethod == 'Efectivo')
+        .fold<double>(0.0, (sum, s) => sum + s.total);
+    final card = sales
+        .where((s) => s.paymentMethod == 'Tarjeta')
+        .fold<double>(0.0, (sum, s) => sum + s.total);
+    final transfer = sales
+        .where((s) => s.paymentMethod == 'Transferencia')
+        .fold<double>(0.0, (sum, s) => sum + s.total);
 
     final buffer = StringBuffer();
     buffer.writeln('🍔 *TEXAS BURGER - REPORTE DE VENTAS* 🍔');
-    buffer.writeln('📅 Periodo: $periodName (${dateFormat.format(DateTime.now())})');
-    buffer.writeln('🧾 Total de tickets: ${sales.length}');
+    buffer.writeln(
+      '📅 Periodo: $periodName (${dateFormat.format(DateTime.now())})',
+    );
+    buffer.writeln('🧾 Total de tickets válidos: ${sales.length}');
+    buffer.writeln(
+      'Cancelados (excluidos del ingreso): ${all.where((s) => s.isCancelled).length}',
+    );
     buffer.writeln('----------------------------------');
     buffer.writeln('💵 Efectivo: \$${cash.toStringAsFixed(2)}');
     buffer.writeln('💳 Tarjeta: \$${card.toStringAsFixed(2)}');
@@ -170,7 +214,9 @@ class ExportService {
         buffer.writeln('#${sale.ticketNumber} — ${sale.companyName}');
         buffer.writeln('Sucursal: ${sale.branchName}');
         buffer.writeln('Atendido por: ${sale.employeeName}');
-        buffer.writeln('Fecha: ${saleDate.format(sale.timestamp)} | Hora: ${saleTime.format(sale.timestamp)}');
+        buffer.writeln(
+          'Fecha: ${saleDate.format(sale.timestamp)} | Hora: ${saleTime.format(sale.timestamp)}',
+        );
       }
     }
 

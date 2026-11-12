@@ -46,7 +46,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         sales: salesToExport.cast(),
         title: _selectedDate != null
             ? 'Ventas ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}'
-            : 'Historial completo',
+            : 'Historial del dispositivo (sin verificación remota)',
       ),
     );
   }
@@ -98,7 +98,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final totalAmount = filteredSales.fold<double>(
       0.0,
-      (sum, s) => sum + s.total,
+      (sum, s) => sum + (s.isCancelled ? 0 : s.total),
     );
 
     return Scaffold(
@@ -109,6 +109,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
               children: [
+                const Text('Historial del dispositivo: los estados remotos pueden estar desactualizados. Consulta Supabase para verificar cancelaciones.'),
                 Row(
                   children: [
                     Expanded(
@@ -191,7 +192,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                     Text(
-                      'Total: \$${totalAmount.toStringAsFixed(2)}',
+                      'Total local: \$${totalAmount.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: AppTheme.primary,
                         fontSize: 16,
@@ -203,12 +204,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: SaleHistoryList(
-              sales: filteredSales,
-              onDelete: (id) => _salesService.cancelSale(id),
-            ),
-          ),
+          Expanded(child: SaleHistoryList(sales: filteredSales)),
         ],
       ),
     );

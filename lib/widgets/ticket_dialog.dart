@@ -49,6 +49,7 @@ class TicketDialog extends StatelessWidget {
     if (venta.paymentMethod == 'Efectivo' && venta.changeReturned > 0) {
       buffer.writeln('Cambio devuelto: \$${venta.changeReturned.toStringAsFixed(2)}');
     }
+    if (venta.isCancelled) buffer.writeln('CANCELADA: ${venta.cancellationReason ?? ''}');
     buffer.writeln('¡Gracias por su preferencia!');
     return buffer.toString();
   }
@@ -97,6 +98,7 @@ class TicketDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (venta.isCancelled) Text('Motivo: ${venta.cancellationReason ?? "No disponible"}\nFecha: ${venta.cancelledAt ?? "No disponible"}\nResponsable: ${venta.cancelledBy ?? "No disponible"}\nInventario reintegrado: ${venta.inventoryReturned ? "Sí" : "No"}'),
               Container(
                 width: 54,
                 height: 54,
@@ -107,8 +109,8 @@ class TicketDialog extends StatelessWidget {
                 child: const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 36),
               ),
               const SizedBox(height: 10),
-              const Text(
-                '¡Venta Registrada!',
+              Text(
+                venta.isCancelled ? 'Venta CANCELADA' : '¡Venta Registrada!',
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,

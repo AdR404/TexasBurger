@@ -1,14 +1,18 @@
-import 'dart:io';
+import 'dart:io' show HttpDate;
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/corte_caja.dart';
 import '../models/sale_context.dart';
 import 'db_service.dart';
+import 'sale_actions.dart';
 import 'user_role_service.dart';
 import 'app_auth_service.dart';
 import 'caja_service.dart';
 
 class CajaSnapshot {
-  const CajaSnapshot(this.active, this.history);
+  const CajaSnapshot(this.active, this.history, [this.summary]);
+  final Map<String, dynamic>? summary;
   final CorteCaja? active;
   final List<CorteCaja> history;
 }
@@ -30,6 +34,24 @@ class CajaRepository {
   final DateTime Function(DateTime) _salesClock;
   final Future<DateTime> Function() _checkedNow;
 
+  static void debugFailure(String operation, Object error, StackTrace stack) {
+    if (!kDebugMode) return;
+    final code =
+        error is PostgrestException &&
+            RegExp(r'^[A-Z0-9]{5,12}$').hasMatch(error.code ?? '')
+        ? error.code
+        : null;
+    debugPrint(
+      '[Caja] $operation: ${error.runtimeType}${code == null ? '' : ' code=$code'}',
+    );
+    final locations = RegExp(
+      r'(?:caja_repository|caja_service|sale_actions)\.dart:\d+:\d+',
+    ).allMatches(stack.toString()).map((m) => m.group(0)).toSet().take(4);
+    for (final location in locations) {
+      debugPrint('[Caja] $location');
+    }
+  }
+
   static DateTime monterreyWallClock(DateTime instant) {
     if (instant.toUtc().year < 2023) {
       throw StateError(
@@ -39,29 +61,36 @@ class CajaRepository {
     return instant.toUtc().subtract(const Duration(hours: 6));
   }
 
-  static Future<DateTime> checkDeviceClock() async {
-    if (DateTime.now().timeZoneOffset != const Duration(hours: -6)) {
+  static Future<DateTime> checkDeviceClock({
+    http.Client? client,
+    Uri? endpoint,
+    DateTime Function()? now,
+  }) async {
+    final clock = now ?? DateTime.now;
+    if (clock().timeZoneOffset != const Duration(hours: -6)) {
       throw StateError(
         'Configura el dispositivo con la zona America/Monterrey (UTC−6) y fecha/hora automáticas antes de operar Caja.',
       );
     }
-    final client = HttpClient();
+    final transport = client ?? http.Client();
     try {
-      final started = DateTime.now().toUtc();
-      final request = await client
-          .headUrl(Uri.parse('${DbService.environment!.url}/auth/v1/health'))
+      final started = clock().toUtc();
+      final response = await transport
+          .head(
+            endpoint ??
+                Uri.parse('${DbService.environment!.url}/auth/v1/health'),
+          )
           .timeout(const Duration(seconds: 8));
-      final response = await request.close().timeout(
-        const Duration(seconds: 8),
-      );
-      final header = response.headers.value(HttpHeaders.dateHeader);
+      final header = response.headers['date'];
       if (header == null || response.statusCode >= 500) {
-        throw StateError('No se pudo verificar el reloj con Supabase.');
+        throw StateError(
+          'No se pudo verificar el reloj con Supabase: falta la cabecera Date accesible o el servidor no está disponible. En Chrome revisa CORS y Access-Control-Expose-Headers. No se realizará la operación.',
+        );
       }
       final server = HttpDate.parse(header).toUtc();
-      final now = DateTime.now().toUtc();
-      if (now.difference(started).inSeconds > 10 ||
-          now.difference(server).abs() > const Duration(seconds: 30)) {
+      final current = clock().toUtc();
+      if (current.difference(started).inSeconds > 10 ||
+          current.difference(server).abs() > const Duration(seconds: 30)) {
         throw StateError(
           'El reloj del dispositivo difiere de Supabase o la conexión es demasiado lenta. Activa fecha/hora automáticas y actualiza Caja.',
         );
@@ -70,7 +99,7 @@ class CajaRepository {
       // into the future; the subsecond/concurrent-close gap remains a limitation.
       return server;
     } finally {
-      client.close(force: true);
+      if (client == null) transport.close();
     }
   }
 
@@ -143,28 +172,68 @@ class CajaRepository {
   }
 
   Future<CajaSnapshot> load(String branch) async {
-    final actor = await authorize();
-    final activeRow = await _open(branch);
-    final closed = await db
-        .from('caja_turnos')
-        .select()
-        .eq('empresa_id', 'texas_burger')
-        .eq('sucursal_id', branch)
-        .not('fecha_cierre', 'is', null)
-        .order('fecha_apertura', ascending: false)
-        .order('id', ascending: false)
-        .limit(50)
-        .retry(enabled: false)
-        .timeout(const Duration(seconds: 15));
-    final history = closed.map((r) => _map(r, const [])).toList();
-    CorteCaja? active;
-    if (activeRow != null) {
-      final moves = await _movements(activeRow['id'] as int);
-      final sales = await _sales(activeRow, await _checkedNow());
-      active = _map(activeRow, moves, sales: sales);
+    var stage = 'autorizacion';
+    try {
+      final actor = await authorize();
+      stage = 'turnos.abierto.select';
+      final activeRow = await _open(branch);
+      stage = 'turnos.cerrados.select';
+      final closed = await db
+          .from('caja_turnos')
+          .select()
+          .eq('empresa_id', 'texas_burger')
+          .eq('sucursal_id', branch)
+          .not('fecha_cierre', 'is', null)
+          .order('fecha_apertura', ascending: false)
+          .order('id', ascending: false)
+          .limit(50)
+          .retry(enabled: false)
+          .timeout(const Duration(seconds: 15));
+      stage = 'turnos.cerrados.decode';
+      final history = closed.map((r) => _map(r, const [])).toList();
+      CorteCaja? active;
+      Map<String, dynamic>? summary;
+      if (activeRow != null) {
+        stage = 'movimientos.select_decode';
+        final moves = await _movements(activeRow['id'] as int);
+        final Map<String, int> sales;
+        if (SaleActions.verifiedCashEnabled) {
+          stage = 'caja_resumen_turno';
+          summary = await SaleActions().summary(activeRow['id'] as int);
+          if (summary['cerrado'] != false) {
+            throw StateError('El turno cambió; actualiza Caja.');
+          }
+          stage = 'resumen.decode';
+          final methods = summary['por_metodo'] as Map;
+          sales = {
+            for (final m in ['Efectivo', 'Tarjeta', 'Transferencia'])
+              m: cents((methods[m] as Map)['neto'] as num),
+            'orders': summary['ordenes_validas'] as int,
+          };
+        } else {
+          stage = 'ventas_legacy.reloj_select_decode';
+          sales = await _sales(activeRow, await _checkedNow());
+        }
+        stage = 'turno.activo.decode';
+        active = _map(
+          {
+            ...activeRow,
+            if (summary != null) ...{
+              'fondo_inicial': summary['fondo_inicial'],
+              'entradas_total': summary['entradas'],
+              'salidas_total': summary['salidas'],
+            },
+          },
+          moves,
+          sales: sales,
+        );
+      }
+      _sameActor(actor);
+      return CajaSnapshot(active, history, summary);
+    } catch (error, stack) {
+      debugFailure('load.$stage', error, stack);
+      rethrow;
     }
-    _sameActor(actor);
-    return CajaSnapshot(active, history);
   }
 
   Future<List<CajaMovimiento>> _movements(int id) async =>
@@ -232,7 +301,7 @@ class CajaRepository {
     final rows = await _all(
       () => db
           .from('ventas')
-          .select('id,total,metodo_pago')
+          .select('id,total,metodo_pago,estado')
           .eq('empresa_id', 'texas_burger')
           .eq('sucursal_id', turn['sucursal_id'])
           .gte('fecha_hora', wall(opening))
@@ -245,6 +314,11 @@ class CajaRepository {
       'orders': rows.length,
     };
     for (final row in rows) {
+      if (row['estado'] == 'cancelada') {
+        throw StateError(
+          'Este turno contiene cancelaciones. Se requiere instalar y habilitar el cierre verificado; no se usarán totales del procedimiento anterior.',
+        );
+      }
       final method = row['metodo_pago'];
       if (!['Efectivo', 'Tarjeta', 'Transferencia'].contains(method) ||
           row['total'] is! num) {
@@ -272,14 +346,16 @@ class CajaRepository {
         throw StateError('Respuesta inesperada');
       }
       return result;
-    } on PostgrestException catch (e) {
+    } on PostgrestException catch (e, stack) {
+      debugFailure('rpc.$name', e, stack);
       if (['42501', '22023', '23505'].contains(e.code)) {
         throw StateError(e.message);
       }
       throw StateError(
         'Operación sin confirmar. Consulta Caja antes de repetirla; no hay reintentos automáticos.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      debugFailure('rpc.$name', e, stack);
       throw StateError(
         'Operación sin confirmar. Consulta Caja antes de repetirla; no hay reintentos automáticos.',
       );
@@ -287,29 +363,41 @@ class CajaRepository {
   }
 
   Future<int> open(SaleContext context, double cash) async {
-    cents(cash);
-    final actor = await authorize();
-    final profile = AppAuthService().currentUser;
-    if (profile == null || profile.id != actor ||
-        context.employeeId != profile.employeeId ||
-        context.employeeName != profile.employeeName ||
-        AppAuthService().branches[context.branchId] != context.branchName ||
-        CajaService().saleContext?.branchId != context.branchId) {
-      throw StateError('La apertura requiere el empleado autenticado y la sucursal operativa actual.');
+    var stage = 'autorizacion';
+    try {
+      cents(cash);
+      final actor = await authorize();
+      final profile = AppAuthService().currentUser;
+      if (profile == null ||
+          profile.id != actor ||
+          context.employeeId != profile.employeeId ||
+          context.employeeName != profile.employeeName ||
+          AppAuthService().branches[context.branchId] != context.branchName ||
+          CajaService().saleContext?.branchId != context.branchId) {
+        throw StateError(
+          'La apertura requiere el empleado autenticado y la sucursal operativa actual.',
+        );
+      }
+      stage = 'turnos.abierto.select';
+      final existing = await _open(context.branchId);
+      if (existing != null) return existing['id'] as int;
+      stage = 'reloj';
+      await _checkedNow();
+      if (AppAuthService().currentUser?.id != actor ||
+          CajaService().saleContext?.branchId != context.branchId) {
+        throw StateError('Cambió la sesión o sucursal antes de abrir Caja.');
+      }
+      stage = 'caja_abrir_turno';
+      return await _rpc('caja_abrir_turno', {
+        'p_sucursal_id': context.branchId,
+        'p_empleado_pos_id': profile.employeeId,
+        'p_empleado_nombre': profile.employeeName,
+        'p_fondo_inicial': cash,
+      }, actor);
+    } catch (error, stack) {
+      debugFailure('open.$stage', error, stack);
+      rethrow;
     }
-    final existing = await _open(context.branchId);
-    if (existing != null) return existing['id'] as int;
-    await _checkedNow();
-    if (AppAuthService().currentUser?.id != actor ||
-        CajaService().saleContext?.branchId != context.branchId) {
-      throw StateError('Cambió la sesión o sucursal antes de abrir Caja.');
-    }
-    return _rpc('caja_abrir_turno', {
-      'p_sucursal_id': context.branchId,
-      'p_empleado_pos_id': profile.employeeId,
-      'p_empleado_nombre': profile.employeeName,
-      'p_fondo_inicial': cash,
-    }, actor);
   }
 
   Future<void> movement(
@@ -334,12 +422,30 @@ class CajaRepository {
     }, actor);
   }
 
-  Future<int> close(CorteCaja turn, double counted, String notes) async {
+  Future<int> close(
+    CorteCaja turn,
+    double counted,
+    String notes, {
+    String? fingerprint,
+  }) async {
     cents(counted);
     final actor = await authorize();
     final current = await _open(turn.openingContext!.branchId);
     if (current == null || '${current['id']}' != turn.id) {
       throw StateError('El turno ya está cerrado o cambió. Actualiza Caja.');
+    }
+    if (SaleActions.verifiedCashEnabled) {
+      if (fingerprint == null) {
+        throw StateError(
+          'Consulta y confirma el resumen del servidor antes de cerrar.',
+        );
+      }
+      return SaleActions().close(
+        int.parse(turn.id),
+        fingerprint,
+        counted,
+        notes,
+      );
     }
     final totals = await _sales(current, await _checkedNow());
     return _rpc('caja_cerrar_turno', {

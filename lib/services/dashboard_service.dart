@@ -7,6 +7,7 @@ class DashboardService {
   static List<Venta> filterSales(List<Venta> allSales, DashboardPeriod period) {
     final now = DateTime.now();
     return allSales.where((v) {
+      if (v.isCancelled) return false;
       switch (period) {
         case DashboardPeriod.hoy:
           return v.timestamp.year == now.year &&

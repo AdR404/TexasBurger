@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.5
   supabase_flutter: ^2.18.0
   file_saver: ^0.7.0
+  http: 1.6.0 # Already resolved transitively; browser-compatible clock request.
 
 dev_dependencies:
   flutter_test:

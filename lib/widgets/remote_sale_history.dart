@@ -5,6 +5,8 @@ import '../services/caja_service.dart';
 import '../services/db_service.dart';
 import '../services/sales_service.dart';
 import '../theme/app_theme.dart';
+import '../services/sale_actions.dart';
+import 'sale_actions_panel.dart';
 
 /// A read-only view: server rows never replace the local history used by Caja.
 class RemoteSaleHistory extends StatefulWidget {
@@ -88,6 +90,7 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
         branchId: _branch,
         date: _date,
       );
+      if (widget.load == null) await SalesService().applyRemoteStates(rows);
       if (!mounted || revision != _revision) return;
       setState(() {
         _rows = rows.take(50).toList();
@@ -126,7 +129,11 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
     final totalsKnown = rows.every((r) => r['total'] is num);
     final total = rows.fold<double>(
       0,
-      (s, r) => s + ((r['total'] as num?)?.toDouble() ?? 0),
+      (s, r) =>
+          s +
+          (r['estado'] == 'cancelada'
+              ? 0
+              : ((r['total'] as num?)?.toDouble() ?? 0)),
     );
     return Scaffold(
       body: RefreshIndicator(
@@ -206,7 +213,7 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
               ],
             ),
             const Text(
-              'Supabase · Solo consulta. Búsqueda y suma sobre esta página (50 ventas máximo). '
+              'Supabase · Historial remoto. Búsqueda y suma sobre esta página (50 ventas máximo). '
               'El ID remoto no es el folio del ticket local.',
               style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
@@ -221,7 +228,7 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
             ],
             if (!_loading && _error == null) ...[
               Text(
-                '${rows.length} ventas · Total visible: ${totalsKnown ? _money(total) : 'No disponible'}',
+                '${rows.length} ventas · Ingreso válido visible: ${totalsKnown ? _money(total) : 'No disponible'}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               if (rows.isEmpty)
@@ -238,12 +245,18 @@ class _RemoteSaleHistoryState extends State<RemoteSaleHistory> {
                     subtitle: Text(
                       '${_dateText(sale['fecha_hora'])}\n'
                       '${_text(sale['metodo_pago'])} · ${_text(sale['sucursal_nombre'])}\n'
-                      'Atendió: ${_text(sale['empleado_nombre'])}',
+                      'Atendió: ${_text(sale['empleado_nombre'])} · ${sale['estado'] == 'cancelada' ? 'CANCELADA' : 'Activa'}',
                     ),
                     isThreeLine: true,
                     onTap: () => showDialog<void>(
                       context: context,
-                      builder: (_) => _RemoteSaleDetails(sale: sale),
+                      builder: (_) => _RemoteSaleDetails(
+                        sale: sale,
+                        onChanged: () async {
+                          await _refresh(page: _page);
+                          await CajaService().refreshRemote();
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -294,7 +307,8 @@ List<Map<String, dynamic>> _details(Map<String, dynamic> sale) =>
         .toList();
 
 class _RemoteSaleDetails extends StatelessWidget {
-  const _RemoteSaleDetails({required this.sale});
+  const _RemoteSaleDetails({required this.sale, required this.onChanged});
+  final Future<void> Function() onChanged;
   final Map<String, dynamic> sale;
 
   @override
@@ -341,6 +355,32 @@ class _RemoteSaleDetails extends StatelessWidget {
               field('Sucursal', _text(sale['sucursal_nombre'])),
               field('Atendió', _text(sale['empleado_nombre'])),
               field('Pago', _text(sale['metodo_pago'])),
+              field(
+                'Estado',
+                sale['estado'] == 'cancelada'
+                    ? 'CANCELADA · excluida de ingresos'
+                    : 'Activa',
+              ),
+              if (sale['estado'] == 'cancelada') ...[
+                field('Motivo', _text(sale['cancelacion_motivo'])),
+                field('Cancelada el', _dateText(sale['cancelada_en'])),
+                field('Administrador (UUID)', _text(sale['cancelada_por'])),
+                field(
+                  'Inventario reintegrado',
+                  sale['inventario_reintegrado'] == true ? 'Sí' : 'No',
+                ),
+                if (SaleActions.verifiedCashEnabled &&
+                    sale['metodo_pago'] == 'Efectivo')
+                  field(
+                    'Efectivo',
+                    switch (sale['efectivo_cancelacion_estado']) {
+                      'no_cobrado' => 'Nunca cobrado',
+                      'devuelto' => 'Devuelto',
+                      _ => 'Pendiente de conciliación',
+                    },
+                  ),
+              ],
+              SaleActionsPanel(sale: sale, onChanged: onChanged),
               const Divider(),
               if (details.isEmpty)
                 const Text(

@@ -2,6 +2,15 @@ import 'venta_item.dart';
 import 'sale_context.dart';
 
 class Venta {
+  final String status;
+  final String? cancellationReason;
+  final String? cancelledAt;
+  final String? cancelledBy;
+  final bool inventoryReturned;
+  bool get isCancelled => status == 'cancelada';
+  final String? operationId;
+  final int? remoteId;
+  final int? cashTurnId;
   final String id;
   final int ticketNumber;
   final List<VentaItem> items;
@@ -27,6 +36,14 @@ class Venta {
   final String? deliveryAddress;
 
   Venta({
+    this.status = 'activa',
+    this.cancellationReason,
+    this.cancelledAt,
+    this.cancelledBy,
+    this.inventoryReturned = false,
+    this.operationId,
+    this.remoteId,
+    this.cashTurnId,
     required this.id,
     required this.ticketNumber,
     required this.items,
@@ -50,13 +67,16 @@ class Venta {
     this.deliveryAddress,
   });
 
-  double? get taxableSubtotal => iva == null ? null : ((total - iva!) * 100).round() / 100;
+  double? get taxableSubtotal =>
+      iva == null ? null : ((total - iva!) * 100).round() / 100;
 
   int get totalItemsCount => items.fold(0, (sum, i) => sum + i.quantity);
 
-  String get companyName => saleContext?.companyName ?? SaleContext.texasBurgerName;
+  String get companyName =>
+      saleContext?.companyName ?? SaleContext.texasBurgerName;
   String get branchName => saleContext?.branchName ?? SaleContext.notRecorded;
-  String get employeeName => saleContext?.employeeName ?? SaleContext.notRecorded;
+  String get employeeName =>
+      saleContext?.employeeName ?? SaleContext.notRecorded;
 
   String get orderTypeBadge {
     switch (orderType) {
@@ -77,6 +97,14 @@ class Venta {
   }
 
   Map<String, dynamic> toJson() => {
+    if (operationId != null) 'operationId': operationId,
+    if (remoteId != null) 'remoteId': remoteId,
+    if (cashTurnId != null) 'cashTurnId': cashTurnId,
+    'status': status,
+    'cancellationReason': cancellationReason,
+    'cancelledAt': cancelledAt,
+    'cancelledBy': cancelledBy,
+    'inventoryReturned': inventoryReturned,
     'id': id,
     'ticketNumber': ticketNumber,
     'items': items.map((i) => i.toJson()).toList(),
@@ -101,6 +129,14 @@ class Venta {
   };
 
   factory Venta.fromJson(Map<String, dynamic> json) => Venta(
+    status: json['status'] as String? ?? 'activa',
+    cancellationReason: json['cancellationReason'] as String?,
+    cancelledAt: json['cancelledAt'] as String?,
+    cancelledBy: json['cancelledBy'] as String?,
+    inventoryReturned: json['inventoryReturned'] == true,
+    operationId: json['operationId'] as String?,
+    remoteId: json['remoteId'] as int?,
+    cashTurnId: json['cashTurnId'] as int?,
     id: json['id'] as String,
     ticketNumber: json['ticketNumber'] as int? ?? 1,
     items: (json['items'] as List<dynamic>)

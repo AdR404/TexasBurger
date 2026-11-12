@@ -3,6 +3,7 @@ import '../models/producto.dart';
 import '../models/venta_item.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
+import '../services/db_service.dart';
 import '../services/caja_service.dart';
 import '../services/pricing_service.dart';
 import '../services/discount_code_service.dart';
@@ -30,6 +31,35 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
   final List<VentaItem> _cartItems = [];
   String? _couponCode;
   bool _saving = false;
+
+  Future<void> _recoverInventorySale() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final sale = await _salesService.recoverInventorySale();
+      _clearCart();
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => TicketDialog(venta: sale),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is StateError
+                  ? error.message.toString()
+                  : 'No se pudo recuperar el cobro. El intento se conserva; no vuelvas a cobrar.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   void initState() {
@@ -291,6 +321,12 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             child: Column(
               children: [
                 const StaffContextBar(),
+                if (DbService.inventorySalesEnabled)
+                  TextButton.icon(
+                    onPressed: _saving ? null : _recoverInventorySale,
+                    icon: const Icon(Icons.restore),
+                    label: const Text('Recuperar cobro pendiente'),
+                  ),
                 const SizedBox(height: 8),
                 TextField(
                   style: const TextStyle(color: Colors.white),

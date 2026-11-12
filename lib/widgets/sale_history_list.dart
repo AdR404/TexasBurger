@@ -87,6 +87,7 @@ class SaleHistoryList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(venta.isCancelled ? 'CANCELADA' : 'Activa'),
                         Wrap(
                           spacing: 8,
                           runSpacing: 4,

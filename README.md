@@ -29,10 +29,10 @@ flutter pub get
 4. Ejecutar la aplicación:
 
 ```bash
-flutter run --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true
+flutter run --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true --dart-define=TEXAS_ENABLE_INVENTORY_SALES=true --dart-define=TEXAS_ENABLE_SALE_CANCELLATIONS=true --dart-define=TEXAS_ENABLE_VERIFIED_CASH_CLOSE=true
 ```
 
-**Importante:** utilizar el parámetro `TEXAS_ENABLE_SIMPLE_SALES=true` para habilitar el registro de ventas en Supabase.
+**Importante:** utilizar los parámetros para que la aplicación tenga la conexión con Supabase.
 
 Los datos simulados del inventario están desactivados de forma predeterminada. Para probar su interfaz en una compilación de desarrollo, iniciar con `--dart-define=TEXAS_ENABLE_DEMO_DATA=true`. No habilites esta bandera en compilaciones de producción.
 
@@ -72,7 +72,7 @@ Ventas, Historial, Caja e Inventario están conectados a Supabase cuando se util
 Para generar el APK de Android:
 
 ```bash
-flutter build apk --release --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true
+flutter build apk --release --dart-define=TEXAS_ENABLE_SIMPLE_SALES=true --dart-define=TEXAS_ENABLE_INVENTORY_SALES=true --dart-define=TEXAS_ENABLE_SALE_CANCELLATIONS=true --dart-define=TEXAS_ENABLE_VERIFIED_CASH_CLOSE=true
 ```
 
 El archivo generado se encuentra en:

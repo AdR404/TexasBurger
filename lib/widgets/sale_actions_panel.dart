@@ -7,10 +7,12 @@ class SaleActionsPanel extends StatefulWidget {
     required this.sale,
     required this.onChanged,
     this.actions,
+    this.ticketStyle = false,
   });
   final Map<String, dynamic> sale;
   final Future<void> Function() onChanged;
   final SaleActions? actions;
+  final bool ticketStyle;
   @override
   State<SaleActionsPanel> createState() => _SaleActionsPanelState();
 }
@@ -138,22 +140,42 @@ class _SaleActionsPanelState extends State<SaleActionsPanel> {
         sale['estado'] == 'cancelada' &&
         sale['metodo_pago'] == 'Efectivo' &&
         sale['efectivo_cancelacion_estado'] == null;
+    final actionButton = widget.ticketStyle
+        ? Tooltip(
+            message: reconcile ? 'Conciliar efectivo' : 'Cancelar venta',
+            child: TextButton.icon(
+              onPressed: _busy || _submitted ? null : () => _form(reconcile),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade800,
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                minimumSize: const Size(0, 52),
+                textStyle: const TextStyle(fontSize: 11),
+              ),
+              icon: Icon(
+                reconcile ? Icons.payments_outlined : Icons.cancel_outlined,
+                size: 18,
+              ),
+              label: Text(reconcile ? 'Conciliar' : 'Cancelar'),
+            ),
+          )
+        : TextButton.icon(
+            onPressed: _busy || _submitted ? null : () => _form(reconcile),
+            icon: Icon(
+              reconcile ? Icons.payments_outlined : Icons.cancel_outlined,
+            ),
+            label: Text(reconcile ? 'Conciliar efectivo' : 'Cancelar venta'),
+          );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (_message != null) Text(_message!),
         if (_busy) const LinearProgressIndicator(),
         if (cancel || reconcile) ...[
-          const Text(
-            'Requiere permiso explícito para esta sucursal; el servidor validará la autorización.',
-          ),
-          TextButton.icon(
-            onPressed: _busy || _submitted ? null : () => _form(reconcile),
-            icon: Icon(
-              reconcile ? Icons.payments_outlined : Icons.cancel_outlined,
+          if (!widget.ticketStyle)
+            const Text(
+              'Requiere permiso explícito para esta sucursal; el servidor validará la autorización.',
             ),
-            label: Text(reconcile ? 'Conciliar efectivo' : 'Cancelar venta'),
-          ),
+          actionButton,
         ],
       ],
     );

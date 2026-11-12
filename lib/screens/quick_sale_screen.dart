@@ -322,12 +322,6 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
             child: Column(
               children: [
                 const StaffContextBar(),
-                if (DbService.inventorySalesEnabled)
-                  TextButton.icon(
-                    onPressed: _saving ? null : _recoverInventorySale,
-                    icon: const Icon(Icons.restore),
-                    label: const Text('Recuperar cobro pendiente'),
-                  ),
                 const SizedBox(height: 8),
                 TextField(
                   style: const TextStyle(color: Colors.white),
@@ -338,6 +332,16 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
                       Icons.search,
                       color: AppTheme.goldLight,
                     ),
+                    suffixIcon: DbService.inventorySalesEnabled
+                        ? IconButton(
+                            tooltip: 'Recuperar cobro pendiente',
+                            onPressed: _saving ? null : _recoverInventorySale,
+                            icon: const Icon(
+                              Icons.restore,
+                              color: AppTheme.goldLight,
+                            ),
+                          )
+                        : null,
                     hintStyle: const TextStyle(color: AppTheme.goldLight),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,

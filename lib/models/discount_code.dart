@@ -29,6 +29,36 @@ class DiscountCode {
     return discount.clamp(0.0, amount).toDouble();
   }
 
+  Map<String, dynamic> toSupabase() => {
+    'codigo': code.trim().toUpperCase(),
+    'descripcion': description.trim(),
+    'tipo': kind == DiscountKind.percentage ? 'porcentaje' : 'monto_fijo',
+    'valor': value,
+    'activo': isActive,
+  };
+
+  factory DiscountCode.fromSupabase(Map<String, dynamic> row) {
+    final kind = switch (row['tipo']) {
+      'porcentaje' => DiscountKind.percentage,
+      'monto_fijo' => DiscountKind.fixedAmount,
+      _ => throw const FormatException('Tipo de cupón desconocido'),
+    };
+
+    final coupon = DiscountCode(
+      code: row['codigo'] as String,
+      description: row['descripcion'] as String? ?? '',
+      kind: kind,
+      value: (row['valor'] as num).toDouble(),
+      isActive: row['activo'] as bool? ?? true,
+    );
+
+    if (!coupon.isValid) {
+      throw const FormatException('Los datos del cupón no son válidos');
+    }
+
+    return coupon;
+  }
+
   Map<String, dynamic> toJson() => {
     'code': code,
     'description': description,

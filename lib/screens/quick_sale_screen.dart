@@ -66,6 +66,7 @@ class _QuickSaleScreenState extends State<QuickSaleScreen> {
     super.initState();
     _productService.addListener(_onServiceUpdate);
     DiscountCodeService().addListener(_onServiceUpdate);
+    DiscountCodeService().refresh();
   }
 
   @override

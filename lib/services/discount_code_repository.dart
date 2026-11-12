@@ -8,8 +8,10 @@ class DiscountCodeRepository {
 
   final SupabaseClient _client;
 
-  static const String _schema = 'cobrador';
-  static const String _table = 'cupones';
+  // The database currently exposes this as a table literally named
+  // "cobrador.cupones" inside the public schema.
+  static const String _schema = 'public';
+  static const String _table = 'cobrador.cupones';
 
   Future<List<DiscountCode>> fetchAll() async {
     final rows = await _client

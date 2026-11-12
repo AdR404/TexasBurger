@@ -55,11 +55,11 @@ class _DiscountCodesDialogState extends State<DiscountCodesDialog> {
     setState(() => _busy = true);
     try {
       await action();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         setState(
           () => _error =
-              'No se pudo guardar el cambio. Los datos anteriores se conservan.',
+              'No se pudo guardar el cambio. Los datos anteriores se conservan.\n$error',
         );
       }
     } finally {
